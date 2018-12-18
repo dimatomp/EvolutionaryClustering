@@ -1,4 +1,7 @@
-def run_one_plus_one(model, index, data, n_clusters, minimize=True, boundary=5e-5, num_tries=1000, logging=None):
+from log_handlers import default_logging
+
+
+def run_one_plus_one(model, index, data, n_clusters, minimize=True, boundary=1e-5, num_tries=1000, logging=None):
     c_solution = model.generate_initial(data, n_clusters)
     c_index = index(c_solution)
     last_breakthrough, c_tries = c_index, 0
@@ -9,11 +12,7 @@ def run_one_plus_one(model, index, data, n_clusters, minimize=True, boundary=5e-
     def last_boundary():
         return last_breakthrough - boundary if minimize else last_breakthrough + boundary
 
-    def default_logging(n_step, c_index, c_solution, n_mutations, minor):
-        print("[minor] " if minor else "", n_step, ": index value ", c_index, ', total ', n_mutations, ' mutations',
-              sep='')
-
-    logging = logging or default_logging()
+    logging = logging or default_logging
     n_step = 0
     n_mutations = 0
     while c_tries < num_tries:
