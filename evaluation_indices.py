@@ -1,14 +1,42 @@
 import numpy as np
+from sklearn.metrics import silhouette_score, calinski_harabaz_score
+from metrics.ch_index import Index as VRCIndex
+from metrics.sil_index import Index as SilhouetteIndex
 from scipy.spatial.distance import pdist, squareform
 
 
 def silhouette_index(indiv):
     values, data = indiv
-    sortingPerm = np.argsort(values)
-    clusterCounts = np.bincount(values)
-    sortedValues = values[sortingPerm][None, :]
-    dists = squareform(pdist(data[sortingPerm])) / clusterCounts[sortedValues[0]][None, :]
-    a = np.where(sortedValues == sortedValues.T, dists, 0).sum(axis=1)
-    dists = np.where(sortedValues != sortedValues.T, dists, np.inf)
-    b = np.vstack([np.where(sortedValues == i, dists, 0).sum(axis=1) for i in range(len(clusterCounts))]).min(axis=0)
-    return ((b - a) / np.maximum(a, b)).mean()
+    return silhouette_score(data, values)
+
+
+def calinski_harabaz_index(indiv):
+    values, data = indiv
+    return calinski_harabaz_score(data, values)
+
+
+class DynamicIndex:
+    def __init__(self, index):
+        self.index = index
+        self.prev_values = None
+
+    def __call__(self, indiv):
+        values, data = indiv
+        n_clusters = len(np.unique(values))
+        if self.prev_values is None:
+            self.result = self.index.find(data, values, n_clusters)
+        else:
+            for idx in np.argwhere(self.prev_values != values).flatten():
+                self.result = self.index.update(data, n_clusters, values, self.prev_values[idx], values[idx], idx)
+        self.prev_values = values
+        return self.result
+
+
+class DynamicVRCIndex(DynamicIndex):
+    def __init__(self):
+        super(DynamicVRCIndex, self).__init__(VRCIndex())
+
+
+class DynamicSilhouetteIndex(DynamicIndex):
+    def __init__(self):
+        super(DynamicSilhouetteIndex, self).__init__(SilhouetteIndex())

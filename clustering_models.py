@@ -20,12 +20,15 @@ class SinglePointChangeModel(IntegerEncodingModel):
 
 
 class OneNthChangeModel(IntegerEncodingModel):
+    def __init__(self, add_new_clusters=True):
+        self.add_new_clusters = add_new_clusters
+
     def mutate(self, indiv):
         values, data = indiv
         numbers_to_change = np.zeros(len(values), dtype='bool')
         numbers_to_change[np.random.randint(len(values))] = 1
         numbers_to_change[np.random.randint(len(values), size=len(values)) == 0] |= True
-        n_clusters = len(np.unique(values)) + 1
+        n_clusters = len(np.unique(values)) + (1 if self.add_new_clusters else 0)
         values = values.copy()
         values[numbers_to_change] = np.random.randint(n_clusters, size=numbers_to_change.sum())
         empty = np.cumsum(np.bincount(values) == 0)

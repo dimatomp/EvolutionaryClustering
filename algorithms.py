@@ -1,7 +1,7 @@
 from log_handlers import default_logging
 
 
-def run_one_plus_one(model, index, data, n_clusters, minimize=True, boundary=1e-5, num_tries=1000, logging=None):
+def run_one_plus_one(model, index, data, n_clusters, minimize=True, boundary=1e-9, num_tries=10000, logging=None):
     c_solution = model.generate_initial(data, n_clusters)
     c_index = index(c_solution)
     last_breakthrough, c_tries = c_index, 0
