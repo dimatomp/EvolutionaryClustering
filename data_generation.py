@@ -6,7 +6,9 @@ def generate_random_normal(max_points, dim=None, n_clusters=None):
     n_clusters = n_clusters or np.random.randint(2, 50)
     centers = np.random.uniform(low=0, high=50, size=(n_clusters, dim))
     result = []
-    for center in centers:
+    clusters = []
+    for i, center in enumerate(centers):
         n_points = np.random.randint(10, max(11, max_points // n_clusters))
         result.append(np.random.multivariate_normal(center, np.identity(dim), size=n_points))
-    return np.vstack(result), n_clusters
+        clusters.append(np.full(n_points, i))
+    return np.vstack(result), np.hstack(clusters)

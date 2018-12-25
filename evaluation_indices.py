@@ -1,8 +1,4 @@
-import numpy as np
-from sklearn.metrics import silhouette_score, calinski_harabaz_score
-from metrics.ch_index import Index as VRCIndex
-from metrics.sil_index import Index as SilhouetteIndex
-from scipy.spatial.distance import pdist, squareform
+from sklearn.metrics import silhouette_score, calinski_harabaz_score, davies_bouldin_score
 
 
 def silhouette_index(indiv):
@@ -15,6 +11,12 @@ def calinski_harabaz_index(indiv):
     return calinski_harabaz_score(data, values)
 
 
+def davies_bouldin_index(indiv):
+    values, data = indiv
+    return davies_bouldin_score(data, values)
+
+
+'''
 class DynamicIndex:
     def __init__(self, index):
         self.index = index
@@ -40,3 +42,4 @@ class DynamicVRCIndex(DynamicIndex):
 class DynamicSilhouetteIndex(DynamicIndex):
     def __init__(self):
         super(DynamicSilhouetteIndex, self).__init__(SilhouetteIndex())
+'''

@@ -3,8 +3,9 @@ from matplotlib import pyplot as plt
 from matplotlib import colors
 
 
-def default_logging(n_step, c_index, c_solution, n_mutations, minor):
-    print("[minor] " if minor else "", n_step, ": index value ", c_index, ', total ', n_mutations, ' mutations',
+def default_logging(n_step, c_index, c_solution, n_mutations, ground_truth, minor):
+    print("[minor] " if minor else "", n_step, ": index value ", c_index, ", mutual info ", ground_truth, ', total ',
+          n_mutations, ' mutations, ', len(np.unique(c_solution[0])), ' clusters',
           sep='')
 
 
@@ -14,18 +15,14 @@ class Matplotlib2DLogger:
         self.ax = self.fig.add_subplot(111)
         plt.ion()
         plt.show(block=False)
-        self.clusters = None
 
-    def __call__(self, n_step, c_index, c_solution, n_mutations, minor):
-        default_logging(n_step, c_index, c_solution, n_mutations, minor)
+    def __call__(self, n_step, c_index, c_solution, n_mutations, ground_truth, minor):
+        default_logging(n_step, c_index, c_solution, n_mutations, ground_truth, minor)
         values, data = c_solution
         self.ax.clear()
         n_clusters = len(np.unique(values))
-        if n_clusters != self.clusters:
-            print('Now there are', n_clusters, 'clusters')
-            self.clusters = n_clusters
-        for i in range(self.clusters):
-            color = colors.hsv_to_rgb((i / self.clusters, 1, 1))[None, :]
+        for i in range(n_clusters):
+            color = colors.hsv_to_rgb((i / n_clusters, 1, 1))[None, :]
             self.ax.scatter(*data[values == i].T, c=color, s=3)
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
