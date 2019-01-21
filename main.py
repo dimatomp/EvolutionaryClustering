@@ -1,12 +1,14 @@
 from algorithms import *
-from clustering_models import *
+from initialization import *
+from mutations import *
 from data_generation import *
 from evaluation_indices import *
 from log_handlers import *
 
 if __name__ == "__main__":
-    data, clusters = generate_random_normal(20000, dim=2)
-    index, sol = run_one_plus_one(SplitMergeMoveModel(), calinski_harabaz_index, data, clusters, minimize=False,
-                                  logging=Matplotlib2DLogger())
+    data, clusters = normalize_data(load_immunotherapy())  # generate_random_normal(2000, dim=2)
+    index, sol = run_one_plus_one(axis_initialization, split_eliminate_mutation,
+                                  silhouette_index, data,
+                                  clusters, logging=Matplotlib2DLogger() if data.shape[1] == 2 else None)
     print('Resulting index value', index)
-    print(list(sol[0]))
+    print(list(sol["labels"]))
