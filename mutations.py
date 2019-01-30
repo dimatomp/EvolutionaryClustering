@@ -63,6 +63,8 @@ def split_merge_move_mutation(indiv: dict) -> dict:
             dists /= dists.sum()
             n_points = np.count_nonzero(dists)
             n_points = np.random.binomial(n_points - 1, 1 / (n_points - 1)) + 1
+            if n_points == np.count_nonzero(otherElems):
+                continue
             n_indices = np.random.choice(np.argwhere(otherElems).flatten(), n_points, replace=False, p=dists)
             labels[n_indices] = dst_cluster
             emptyLabels = np.cumsum(np.bincount(labels) == 0)
@@ -110,7 +112,6 @@ def split_eliminate_mutation(indiv: dict) -> dict:
             n_points = np.count_nonzero(dists)
             n_points = np.random.binomial(n_points - 1, 1 / (n_points - 1)) + 1 if n_points > 1 else 1
             if n_points == np.count_nonzero(otherElems):
-                print('Tried to merge all clusters into one')
                 continue
             n_indices = np.random.choice(np.argwhere(otherElems).flatten(), n_points, replace=False, p=dists)
             labels[n_indices] = dst_cluster

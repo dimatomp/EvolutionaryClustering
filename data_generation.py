@@ -17,7 +17,7 @@ def generate_random_normal(max_points, dim=None, n_clusters=None):
 
 
 def normalize_data(dataset):
-    return normalize(dataset[0], axis=0), dataset[1]
+    return normalize(dataset[0]), dataset[1]
 
 
 def load_immunotherapy():
@@ -32,6 +32,14 @@ def load_iris():
     data = dataset.values[:, :-1].astype('float')
     clusters = list(set(dataset.values[:, -1]))
     labels = np.array([clusters.index(i) for i in dataset.values[:, -1]])
+    return data, labels
+
+
+def load_user_knowledge():
+    dataset = pd.read_excel('../Data_User_Modeling_Dataset_Hamdi Tolga KAHRAMAN.xls', sheet_name=1)
+    data = dataset.values[:, :-4].astype('float')
+    clusters = list(set(dataset.values[:, -4]))
+    labels = np.array([clusters.index(i) for i in dataset.values[:, -4]])
     return data, labels
 
 # TODO 8 more real datasets
