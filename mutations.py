@@ -121,3 +121,52 @@ def split_eliminate_mutation(indiv: dict) -> dict:
     indiv = indiv.copy()
     indiv["labels"] = labels
     return indiv
+
+
+def evo_cluster_mutation(indiv: dict) -> dict:
+    labels, data = indiv["labels"], indiv["data"]
+    cluster_sizes = np.bincount(labels)
+    labels = labels.copy()
+    while True:
+        method = np.random.randint(3)
+        if method == 0:
+            ex_cluster = np.random.choice(np.argwhere(cluster_sizes > 1).flatten())
+            centroid = data[labels == ex_cluster].mean(axis=0)
+            norm = np.random.multivariate_normal(np.zeros(len(centroid)), np.identity(len(centroid)))
+            dots = (data[labels == ex_cluster] - centroid).dot(norm)
+            ratio = np.random.uniform(dots.min(), dots.max())
+            negativeDot = dots < ratio
+            negativeSum = np.count_nonzero(negativeDot)
+            if negativeSum == 0 or negativeSum == len(negativeDot):
+                continue
+            labels[labels == ex_cluster] = np.where(negativeDot, len(cluster_sizes), ex_cluster)
+        elif method == 1 and len(cluster_sizes) != 2:
+            centroids = np.array([data[labels == i].mean(axis=0) for i in range(len(cluster_sizes))])
+            dists = pdist(centroids, 'minkowski', p=1)
+            dists = np.exp(-dists - np.log(np.exp(-dists).sum()))
+            dists /= dists.sum()
+            pair = np.random.choice(len(dists), p=dists)
+            dists = np.zeros(len(dists))
+            dists[pair] = 1
+            src_cluster, dst_cluster = np.argwhere(squareform(dists) == 1)[0]
+            labels[labels == src_cluster] = dst_cluster
+            labels[labels > src_cluster] -= 1
+        else:
+            dst_cluster = np.random.randint(len(cluster_sizes))  # - 1)
+            centroid = data[labels == dst_cluster].mean(axis=0)
+            otherElems = labels != dst_cluster  # == src_cluster
+            dists = np.linalg.norm(data[otherElems] - centroid, ord=1, axis=1)
+            dists = np.exp(-dists - np.log(np.exp(-dists).sum()))
+            dists /= dists.sum()
+            n_points = np.count_nonzero(dists)
+            n_points = np.random.binomial(n_points - 1, 1 / (n_points - 1)) + 1
+            if n_points == np.count_nonzero(otherElems):
+                continue
+            n_indices = np.random.choice(np.argwhere(otherElems).flatten(), n_points, replace=False, p=dists)
+            labels[n_indices] = dst_cluster
+            emptyLabels = np.cumsum(np.bincount(labels) == 0)
+            labels -= emptyLabels[labels]
+        break
+    indiv = indiv.copy()
+    indiv["labels"] = labels
+    return indiv

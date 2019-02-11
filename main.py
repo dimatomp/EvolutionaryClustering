@@ -6,6 +6,7 @@ from evaluation_indices import *
 from log_handlers import *
 from multiprocessing import Pool
 from sklearn.metrics import adjusted_rand_score
+from sklearn.cluster import KMeans, AffinityPropagation
 
 
 def run_task(args):
@@ -24,12 +25,8 @@ def run_task(args):
 
 if __name__ == "__main__":
     datas = [
-        ('generated_2dim_3cl', generate_random_normal(2000, dim=2, n_clusters=3)),
-        ('generated_2dim_5cl', generate_random_normal(2000, dim=2, n_clusters=5)),
         ('generated_2dim_10cl', generate_random_normal(2000, dim=2, n_clusters=10)),
         ('generated_2dim_30cl', generate_random_normal(2000, dim=2, n_clusters=30)),
-        ('generated_10dim_3cl', generate_random_normal(2000, dim=10, n_clusters=3)),
-        ('generated_10dim_5cl', generate_random_normal(2000, dim=10, n_clusters=5)),
         ('generated_10dim_10cl', generate_random_normal(2000, dim=10, n_clusters=10)),
         ('generated_10dim_30cl', generate_random_normal(2000, dim=10, n_clusters=30)),
         ('iris', normalize_data(load_iris())),
@@ -45,22 +42,33 @@ if __name__ == "__main__":
         ('silhouette', 'silhouette_index'),
         ('calinski_harabaz', 'calinski_harabaz_index'),
         ('davies_bouldin', 'davies_bouldin_index'),
-        ('dvcb_2', 'dvcb_index()'),
-        ('dvcb_5', 'dvcb_index(d=5)'),
+        # ('dvcb_2', 'dvcb_index()'),
+        # ('dvcb_5', 'dvcb_index(d=5)'),
         ('dunn', 'dunn_index'),
         ('generalized_dunn_41', 'generalized_dunn_index(separation="centroid_distance", cohension="diameter")'),
         ('generalized_dunn_43', 'generalized_dunn_index(separation="centroid_distance", cohension="mean_distance")'),
         ('generalized_dunn_51', 'generalized_dunn_index(separation="mean_per_cluster", cohension="diameter")'),
         ('generalized_dunn_53', 'generalized_dunn_index(separation="mean_per_cluster", cohension="mean_distance")'),
         ('generalized_dunn_13', 'generalized_dunn_index(separation="single_linkage", cohension="mean_distance")'),
-        ('generalized_dunn_31', 'generalized_dunn_index(separation="mean_per_point", cohension="diameter")'),
-        ('generalized_dunn_33', 'generalized_dunn_index(separation="mean_per_point", cohension="mean_distance")'),
+        # ('generalized_dunn_31', 'generalized_dunn_index(separation="mean_per_point", cohension="diameter")'),
+        # ('generalized_dunn_33', 'generalized_dunn_index(separation="mean_per_point", cohension="mean_distance")'),
     ]
-    tasks = []
-    for index_name, index in indices:
-        eval(index)
-        for data_name, data in datas:
-            for mutation_name, mutation in mutations:
-                tasks.append(('{}-{}-{}.txt'.format(index_name, data_name, mutation_name), index, data, mutation))
-    with Pool(4) as pool:
-        pool.map(run_task, tasks)
+    with open('state-of-the-art.txt', 'w') as f:
+        for dataname, dataset in datas:
+            data, clusters = dataset
+            for modelname, model in [('KMeans', KMeans(n_clusters=len(np.unique(data[1])))),
+                                     ('Affinity', AffinityPropagation())]:
+                labels = model.fit_predict(data)
+                for indexname, index in indices:
+                    index = eval(index)
+                    print(dataname, modelname, indexname, adjusted_rand_score(clusters, labels),
+                          index({"labels": labels, "data": data}), file=f)
+                f.flush()
+    # tasks = []
+    # for index_name, index in indices:
+    #     eval(index)
+    #     for data_name, data in datas:
+    #         for mutation_name, mutation in mutations:
+    #             tasks.append(('{}-{}-{}.txt'.format(index_name, data_name, mutation_name), index, data, mutation))
+    # with Pool(4) as pool:
+    #     pool.map(run_task, tasks)

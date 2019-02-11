@@ -1,9 +1,10 @@
 import numpy as np
-import sys
 from numpy.linalg import norm
 from scipy.spatial.distance import pdist, squareform
 from scipy.sparse.csgraph import minimum_spanning_tree
 from sklearn.metrics import silhouette_score, calinski_harabaz_score, davies_bouldin_score
+
+from cluster_measures import diameter_separation, mean_centroid_distance_separation
 
 
 def evaluation_index(minimize):
@@ -100,7 +101,7 @@ def dvcb_index(d=2):
     return index
 
 
-def generalized_dunn_index(separation, cohension):
+def generalized_dunn_index(separation, cohesion):
     @evaluation_index(minimize=False)
     def index(indiv):
         labels, data = indiv["labels"], indiv["data"]
@@ -135,17 +136,16 @@ def generalized_dunn_index(separation, cohension):
                 for
                 cluster2, centroid2 in zip(clusters[idx + 1:], centroids[idx + 1:])) for idx, (cluster1, centroid1) in
                                enumerate(zip(clusters[:-1], centroids[:-1])))
-        if cohension == "diameter":
-            points = [d[np.argmax(norm(d - c, axis=1))] for d, c in zip(clusters, centroids)]
-            max_diameter = max(norm(d - p, axis=1).max() for d, p in zip(clusters, points))
-        elif cohension == "mean_distance":
-            max_diameter = 2 * max(norm(cluster - centroid).mean() for cluster, centroid in zip(clusters, centroids))
+        if cohesion == "diameter":
+            max_diameter = max(diameter_separation(clusters=clusters, centroids=centroids))
+        elif cohesion == "mean_distance":
+            max_diameter = 2 * max(mean_centroid_distance_separation(clusters=clusters, centroids=centroids))
         return min_distance / max_diameter
 
     return index
 
 
-dunn_index = generalized_dunn_index(separation="single_linkage", cohension="diameter")
+dunn_index = generalized_dunn_index(separation="single_linkage", cohesion="diameter")
 
 # TODO 3 more (density-based?) measures, not from [2009]
 '''
