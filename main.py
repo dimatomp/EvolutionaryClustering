@@ -14,18 +14,19 @@ def run_task(args):
     print('Launching', fname, file=sys.stderr)
     index = eval(index)
     with open(fname, 'w') as f:
-        index, sol = run_one_plus_one(axis_initialization, mutation,
+        index, sol = run_one_plus_one(prototype_initialization, mutation,
                                       index, data,
                                       lambda labels: adjusted_rand_score(clusters, labels['labels']),
                                       n_clusters=len(np.unique(clusters)),
-                                      # logging=Matplotlib2DLogger(default_logging()))
-                                      logging=default_logging(f))
+                                      logging=Matplotlib2DLogger(default_logging()) if data.shape[
+                                                                                           1] == 2 else default_logging())
+        # logging=default_logging(f))
         print('Resulting index value', index, file=f)
         print(list(sol["labels"]), file=f)
 
 
 if __name__ == "__main__":
-    run_task(['/dev/stdout', 'calinski_harabaz_index', normalize_data(load_iris()), split_eliminate_mutation])
+    run_task(['/dev/stdout', 'calinski_harabaz_index', normalize_data(load_iris()), prototype_hill_climbing_mutation])
     # datas = [
     #     ('generated_2dim_10cl', generate_random_normal(2000, dim=2, n_clusters=10)),
     #     ('generated_2dim_30cl', generate_random_normal(2000, dim=2, n_clusters=30)),

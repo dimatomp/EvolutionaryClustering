@@ -1,6 +1,6 @@
 import numpy as np
 from numpy.linalg import norm
-from scipy.spatial.distance import pdist
+from scipy.spatial.distance import pdist, cdist
 
 
 def get_clusters_and_centroids(labels=None, data=None, cluster_labels=None, clusters=None, centroids=None, **kwargs):
@@ -10,6 +10,21 @@ def get_clusters_and_centroids(labels=None, data=None, cluster_labels=None, clus
         clusters = [data[labels == i] for i in cluster_labels]
         centroids = np.array([d.mean(axis=0) for d in clusters])
     return clusters, centroids
+
+
+def cleanup_empty_clusters(labels):
+    labels -= np.cumsum(np.bincount(labels) == 0)[labels]
+
+
+def get_labels_by_centroids(centroids, data):
+    labels = cdist(data, centroids).argmin(axis=1)
+    centroids = centroids[np.isin(np.arange(0, len(centroids)), labels)]
+    cleanup_empty_clusters(labels)
+    return labels, centroids
+
+
+def get_labels_by_prototypes(prototypes, data):
+    return cdist(data, data[prototypes]).argmin(axis=1)
 
 
 def diameter_separation(ord=2, **kwargs):

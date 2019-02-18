@@ -1,11 +1,5 @@
-import numpy as np
-from scipy.spatial.distance import pdist, squareform, cdist
-
-from cluster_measures import centroid_distance_cohesion
-
-
-def cleanup_empty_clusters(labels):
-    labels -= np.cumsum(np.bincount(labels) == 0)[labels]
+from scipy.spatial.distance import squareform
+from cluster_measures import *
 
 
 def one_nth_change_mutation(indiv: dict) -> dict:
@@ -127,7 +121,7 @@ def split_eliminate_mutation(indiv: dict) -> dict:
 
 
 def evo_cluster_mutation(interestingness):
-    def mutation(indiv: dict) -> dict:
+    def mutation(indiv: dict) -> tuple:
         labels, data = indiv["labels"], indiv["data"]
         clusters = np.unique(labels)
         cluster_sizes = np.count_nonzero(labels[:, None] == clusters[None, :], axis=0)
@@ -219,3 +213,49 @@ def evo_cluster_mutation(interestingness):
         return indiv, detail
 
     return mutation
+
+
+def centroid_hill_climbing_mutation(indiv: dict) -> tuple:
+    while True:
+        centroids, data = indiv['centroids'], indiv['data']
+        method = np.random.choice(3)
+        if method == 0:
+            shape = centroids.shape
+            centroids = centroids.flatten()
+            delta = np.random.uniform(-1, 1)
+            index = np.random.choice(len(centroids))
+            centroids[index] = 2 * delta if centroids[index] == 0 else (1 + 2 * delta) * centroids[index]
+            centroids = centroids.reshape(shape)
+            detail = 'Alter centroid by delta {}'.format(delta)
+        elif method == 1 and len(centroids) > 2:
+            centroids = np.delete(centroids, np.random.choice(len(centroids)), axis=0)
+            detail = 'Remove centroid'
+        else:
+            mindata, maxdata = data.min(axis=0), data.max(axis=0)
+            centroids = np.concatenate(
+                [centroids, [np.random.sample(centroids.shape[1]) * (maxdata - mindata) + mindata]])
+            detail = 'Add centroid'
+        labels, centroids = get_labels_by_centroids(centroids, data)
+        if labels.max() == 0:
+            continue
+        indiv = indiv.copy()
+        indiv['centroids'] = centroids
+        indiv['labels'] = labels
+        return indiv, detail
+
+
+def prototype_hill_climbing_mutation(indiv: dict) -> tuple:
+    prototypes, data = indiv['prototypes'], indiv['data']
+    prototypes = prototypes.copy()
+    n_prototypes = np.count_nonzero(prototypes)
+    n_remove = np.random.binomial(n_prototypes, 1 / n_prototypes)
+    n_add = np.random.binomial(len(prototypes) - n_prototypes, 1 / (len(prototypes) - n_prototypes))
+    n_remove = min(n_remove, n_prototypes + n_add - 2)
+    if n_add > 0:
+        prototypes[np.random.choice(np.argwhere(~prototypes).flatten(), n_add, replace=False)] = True
+    if n_remove > 0:
+        prototypes[np.random.choice(np.argwhere(prototypes).flatten(), n_remove, replace=False)] = False
+    indiv = indiv.copy()
+    indiv['prototypes'] = prototypes
+    indiv['labels'] = get_labels_by_prototypes(prototypes, data)
+    return indiv, "Add {} and remove {} prototypes".format(n_remove, n_remove)
