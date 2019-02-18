@@ -17,7 +17,7 @@ def generate_random_normal(max_points, dim=None, n_clusters=None):
 
 
 def normalize_data(dataset):
-    return normalize(dataset[0]), dataset[1]
+    return normalize(dataset[0], axis=0), dataset[1]
 
 
 def load_immunotherapy():

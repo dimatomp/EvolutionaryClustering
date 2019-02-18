@@ -5,10 +5,10 @@ from matplotlib import colors
 
 
 def default_logging(output=None):
-    def logging(n_step, c_index, c_solution, n_mutations, ground_truth, minor):
+    def logging(n_step, c_index, c_solution, n_mutations, ground_truth, minor, detail):
         print("[minor] " if minor else "", n_step, ": index value ", c_index, ", mutual info ", ground_truth,
               ', total ',
-              n_mutations, ' mutations, ', len(np.unique(c_solution["labels"])), ' clusters',
+              n_mutations, ' mutations, ', len(np.unique(c_solution["labels"])), ' clusters. ', detail or '',
               sep='', file=output or sys.stdout)
         if output is not None:
             output.flush()
@@ -24,9 +24,9 @@ class Matplotlib2DLogger:
         plt.ion()
         plt.show(block=False)
 
-    def __call__(self, n_step, c_index, c_solution, n_mutations, ground_truth, minor):
+    def __call__(self, n_step, c_index, c_solution, n_mutations, ground_truth, minor, detail):
         if self.nested is not None:
-            self.nested(n_step, c_index, c_solution, n_mutations, ground_truth, minor)
+            self.nested(n_step, c_index, c_solution, n_mutations, ground_truth, minor, detail)
         labels, data = c_solution["labels"], c_solution["data"]
         self.ax.clear()
         n_clusters = len(np.unique(labels))

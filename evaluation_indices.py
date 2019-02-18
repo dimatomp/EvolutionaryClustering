@@ -1,10 +1,7 @@
-import numpy as np
-from numpy.linalg import norm
-from scipy.spatial.distance import pdist, squareform
+from scipy.spatial.distance import squareform
 from scipy.sparse.csgraph import minimum_spanning_tree
 from sklearn.metrics import silhouette_score, calinski_harabaz_score, davies_bouldin_score
-
-from cluster_measures import diameter_separation, mean_centroid_distance_separation
+from cluster_measures import *
 
 
 def evaluation_index(minimize):
@@ -129,7 +126,7 @@ def generalized_dunn_index(separation, cohesion):
             matrices = matrices[:, squareform_m]
             min_distance = ((dists * matrices).sum(axis=1) / np.count_nonzero(matrices, axis=1)).min()
         elif separation == "centroid_distance":
-            min_distance = pdist(centroids).min()
+            min_distance = centroid_distance_cohesion(clusters=clusters, centroids=centroids).min()
         elif separation == "mean_per_cluster":
             min_distance = min(min(
                 norm(cluster1 - centroid2).sum() + norm(cluster2 - centroid1).sum() / (len(cluster1) + len(cluster2))

@@ -5,6 +5,7 @@ def run_one_plus_one(initialization, mutation, index, data, external_measure, n_
                      num_tries=10000, logging=None):
     c_solution = initialization(data, n_clusters)
     c_index = index(c_solution)
+    logging(-1, c_index, c_solution, 0, external_measure(c_solution), False, None)
     last_breakthrough, c_tries = c_index, 0
 
     def is_better(a, b):
@@ -19,6 +20,10 @@ def run_one_plus_one(initialization, mutation, index, data, external_measure, n_
     while c_tries < num_tries:
         n_step += 1
         n_solution = mutation(c_solution)
+        if isinstance(n_solution, tuple):
+            n_solution, detail = n_solution
+        else:
+            detail = None
         n_index = index(n_solution)
         if is_better(n_index, c_index):
             n_mutations += 1
@@ -26,9 +31,9 @@ def run_one_plus_one(initialization, mutation, index, data, external_measure, n_
             ground_truth = external_measure(c_solution)
             if is_better(n_index, last_boundary()):
                 last_breakthrough, c_tries = c_index, 0
-                logging(n_step, c_index, c_solution, n_mutations, ground_truth, False)
+                logging(n_step, c_index, c_solution, n_mutations, ground_truth, False, detail)
                 continue
             else:
-                logging(n_step, c_index, c_solution, n_mutations, ground_truth, True)
+                logging(n_step, c_index, c_solution, n_mutations, ground_truth, True, detail)
         c_tries += 1
     return c_index, c_solution
