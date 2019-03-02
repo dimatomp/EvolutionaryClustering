@@ -97,6 +97,17 @@ def density_based_internal_dists(dists, labels, reach_dists=None, cluster_intern
     return internal_labels, internal_dists * matrices
 
 
+def density_based_cluster_sparseness(dists, labels, internal_nodes_list=None, msts=None, d=2):
+    if internal_nodes_list is None or msts is None:
+        internal_nodes_list, msts = density_based_dists_and_internals(dists, labels, d=d)[2:]
+    return np.array([mst[internal_nodes].max() if internal_nodes.any() else 0 for mst, internal_nodes in
+                     zip(msts, internal_nodes_list)])
+
+
+def density_based_sparseness_separation(labels, indiv, ord=2, **kwargs):
+    return density_based_cluster_sparseness(cache_distances(indiv, ord=ord), labels)
+
+
 def density_based_cluster_validity(dists, labels, d=2):
     # ignore_points = cluster_counts[labels] > 1
     # if not ignore_points.all():
@@ -107,15 +118,14 @@ def density_based_cluster_validity(dists, labels, d=2):
     #     dists = dists[squareform(ignore_points[:, None] & ignore_points[None, :], checks=False)]
     #     cluster_counts = cluster_counts[cluster_counts > 1]
     reach_dists, cluster_internals, internal_nodes_list, msts = density_based_dists_and_internals(dists, labels, d=d)
-    cluster_sparseness = np.array([mst[internal_nodes].max() if internal_nodes.any() else 0 for mst, internal_nodes in
-                                   zip(msts, internal_nodes_list)])
+    cluster_sparseness = density_based_cluster_sparseness(dists, labels, internal_nodes_list, msts, d=d)
     internal_labels, internal_dists = density_based_internal_dists(dists, labels, reach_dists=reach_dists,
                                                                    cluster_internals=cluster_internals, d=d)
     cluster_separation = np.where(internal_dists != 0, internal_dists, np.inf).min(axis=1)
     return (cluster_separation - cluster_sparseness) / np.maximum(cluster_separation, cluster_sparseness)
 
 
-def density_based_validity_separation(data, labels, indiv, ord=2, **kwargs):
+def density_based_validity_separation(labels, indiv, ord=2, **kwargs):
     result = density_based_cluster_validity(cache_distances(indiv, ord=ord), labels, d=2)
     return result.max() - result
 
