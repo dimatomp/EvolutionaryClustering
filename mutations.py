@@ -40,9 +40,7 @@ def split_merge_move_mutation(indiv: dict) -> dict:
         elif method == 1 and len(cluster_sizes) != 2:
             centroids = np.array([data[labels == i].mean(axis=0) for i in range(len(cluster_sizes))])
             dists = pdist(centroids, 'minkowski', p=1)
-            dists = np.exp(-dists - np.log(np.exp(-dists).sum()))
-            # dists = dists.max() - dists
-            dists /= dists.sum()
+            dists = construct_probabilities(dists)
             pair = np.random.choice(len(dists), p=dists)
             dists = np.zeros(len(dists))
             dists[pair] = 1
@@ -58,9 +56,7 @@ def split_merge_move_mutation(indiv: dict) -> dict:
             centroid = data[labels == dst_cluster].mean(axis=0)
             otherElems = labels != dst_cluster  # == src_cluster
             dists = np.linalg.norm(data[otherElems] - centroid, ord=1, axis=1)
-            # dists = dists.max() - dists
-            dists = np.exp(-dists - np.log(np.exp(-dists).sum()))
-            dists /= dists.sum()
+            dists = construct_probabilities(dists)
             n_points = np.count_nonzero(dists)
             n_points = np.random.binomial(n_points - 1, 1 / (n_points - 1)) + 1
             if n_points == np.count_nonzero(otherElems):
@@ -106,8 +102,7 @@ def split_eliminate_mutation(indiv: dict) -> dict:
             centroid = data[labels == dst_cluster].mean(axis=0)
             otherElems = labels != dst_cluster
             dists = np.linalg.norm(data[otherElems] - centroid, ord=1, axis=1)
-            dists = np.exp(-dists - np.log(np.exp(-dists).sum()))
-            dists /= dists.sum()
+            dists = construct_probabilities(dists)
             n_points = np.count_nonzero(dists)
             n_points = np.random.binomial(n_points - 1, 1 / (n_points - 1)) + 1 if n_points > 1 else 1
             if n_points == np.count_nonzero(otherElems):
@@ -121,7 +116,7 @@ def split_eliminate_mutation(indiv: dict) -> dict:
     return indiv
 
 
-def evo_cluster_mutation(interestingness):
+def evo_cluster_mutation(separation):
     def mutation(indiv: dict) -> tuple:
         labels, data = indiv["labels"], indiv["data"]
         clusters = np.unique(labels)
@@ -154,8 +149,7 @@ def evo_cluster_mutation(interestingness):
                     detail = 'Guided merge of {} pairs of clusters'.format(n_chosen_pairs)
                     for i in range(n_chosen_pairs):
                         lin_cohesion = squareform(cohesion)
-                        lin_cohesion = np.exp(lin_cohesion - np.log(np.exp(lin_cohesion).sum()))
-                        lin_cohesion /= lin_cohesion.sum()
+                        lin_cohesion = construct_probabilities(lin_cohesion)
                         chosen_pair = np.random.choice(len(lin_cohesion), p=lin_cohesion)
                         # TODO No smarter way to do this?
                         bitarray = np.zeros(len(lin_cohesion), dtype='bool')
@@ -171,9 +165,8 @@ def evo_cluster_mutation(interestingness):
                     n_chosen_clusters = np.random.binomial(len(cluster_sizes) - 1, 1 / (len(cluster_sizes) - 1)) + 1
                     chosen_clusters = np.random.choice(clusters, n_chosen_clusters, replace=False)
                 else:
-                    measures = interestingness(labels=labels, data=data, cluster_labels=clusters, ord=1)
-                    measures = np.exp(measures - np.log(np.exp(measures).sum()))
-                    measures /= measures.sum()
+                    measures = separation(labels=labels, data=data, cluster_labels=clusters, ord=1)
+                    measures = construct_probabilities(measures)
                     n_clusters = np.count_nonzero(measures)
                     if method == 0:
                         n_clusters = min(n_clusters, len(cluster_sizes) - 1)
@@ -209,8 +202,14 @@ def evo_cluster_mutation(interestingness):
                     for i, ex_cluster in enumerate(chosen_clusters):
                         centroid = data[labels == ex_cluster].mean(axis=0)
                         norm = np.random.multivariate_normal(np.zeros(len(centroid)), np.identity(len(centroid)))
-                        dots = (data[labels == ex_cluster] - centroid).dot(norm)
-                        ratio = np.random.uniform(dots.min(), dots.max())
+                        dots = data[labels == ex_cluster].dot(norm)
+                        if guided == 0:
+                            ratio = np.random.uniform(dots.min(), dots.max())
+                        else:
+                            hist, bins = np.histogram(dots, int(np.ceil(np.sqrt(len(dots)))))
+                            probs = construct_probabilities(hist)
+                            index = np.random.choice(len(bins) - 1, p=probs)
+                            ratio = np.random.uniform(bins[index], bins[index + 1])
                         negativeDot = dots < ratio
                         labels[labels == ex_cluster] = np.where(negativeDot, len(cluster_sizes) + i, ex_cluster)
                     detail = '{} split of {} clusters'.format('Guided' if guided == 1 else 'Unguided',

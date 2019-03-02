@@ -35,9 +35,15 @@ def diameter_separation(ord=2, **kwargs):
 
 def mean_centroid_distance_separation(ord=2, **kwargs):
     clusters, centroids = get_clusters_and_centroids(**kwargs)
-    return [norm(cluster - centroid, ord=ord).mean() for cluster, centroid in zip(clusters, centroids)]
+    return np.array([norm(cluster - centroid, ord=ord).mean() for cluster, centroid in zip(clusters, centroids)])
 
 
 def centroid_distance_cohesion(ord=2, **kwargs):
     clusters, centroids = get_clusters_and_centroids(**kwargs)
     return pdist(centroids, metric='minkowski', p=ord)
+
+
+def construct_probabilities(values):
+    # values = np.exp(-values - np.log(np.exp(-values).sum()))
+    values = values.max() - values
+    return values / values.sum()
