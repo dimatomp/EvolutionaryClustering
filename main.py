@@ -14,7 +14,7 @@ def run_task(args):
     print('Launching', fname, file=sys.stderr)
     index = eval(index)
     with open(fname, 'w') as f:
-        index, sol = run_one_plus_one(prototype_initialization, mutation,
+        index, sol = run_one_plus_one(random_initialization, mutation,
                                       index, data,
                                       lambda labels: adjusted_rand_score(clusters, labels['labels']),
                                       n_clusters=len(np.unique(clusters)),
@@ -26,7 +26,8 @@ def run_task(args):
 
 
 if __name__ == "__main__":
-    run_task(['/dev/stdout', 'calinski_harabaz_index', normalize_data(load_iris()), prototype_hill_climbing_mutation])
+    run_task(['/dev/stdout', 'dvcb_index()', normalize_data(generate_random_normal(2000, dim=2, n_clusters=10)),
+              knn_reclassification_mutation])
     # datas = [
     #     ('generated_2dim_10cl', generate_random_normal(2000, dim=2, n_clusters=10)),
     #     ('generated_2dim_30cl', generate_random_normal(2000, dim=2, n_clusters=30)),
@@ -45,7 +46,7 @@ if __name__ == "__main__":
     #     ('silhouette', 'silhouette_index'),
     #     ('calinski_harabaz', 'calinski_harabaz_index'),
     #     ('davies_bouldin', 'davies_bouldin_index'),
-    #     # ('dvcb_2', 'dvcb_index()'),
+    #     ('dvcb_2', 'dvcb_index()'),
     #     # ('dvcb_5', 'dvcb_index(d=5)'),
     #     ('dunn', 'dunn_index'),
     #     ('generalized_dunn_41', 'generalized_dunn_index(separation="centroid_distance", cohension="diameter")'),

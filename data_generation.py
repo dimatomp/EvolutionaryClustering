@@ -27,14 +27,6 @@ def load_immunotherapy():
     return dataset.values, clusters.values
 
 
-def load_iris():
-    dataset = pd.read_csv('../iris.data')
-    data = dataset.values[:, :-1].astype('float')
-    clusters = list(set(dataset.values[:, -1]))
-    labels = np.array([clusters.index(i) for i in dataset.values[:, -1]])
-    return data, labels
-
-
 def load_user_knowledge():
     dataset = pd.read_excel('../Data_User_Modeling_Dataset_Hamdi Tolga KAHRAMAN.xls', sheet_name=1)
     data = dataset.values[:, :-4].astype('float')
@@ -42,4 +34,47 @@ def load_user_knowledge():
     labels = np.array([clusters.index(i) for i in dataset.values[:, -4]])
     return data, labels
 
-# TODO 8 more real datasets
+
+def load_regular_csv(filename, ignore=1):
+    dataset = pd.read_csv(filename)
+    data = dataset.values[:, :-ignore].astype('float')
+    clusters = list(set(dataset.values[:, -ignore]))
+    labels = np.array([clusters.index(i) for i in dataset.values[:, -ignore]])
+    return data, labels
+
+
+def load_iris():
+    return load_regular_csv('../iris.data')
+
+
+def load_mfeat_morphological():
+    return load_regular_csv('../dataset_18_mfeat-morphological.csv')
+
+
+def load_glass():
+    return load_regular_csv('../dataset_41_glass.csv')
+
+
+def load_haberman():
+    return load_regular_csv('../dataset_43_haberman.csv')
+
+
+def load_heart_statlog():
+    return load_regular_csv('../dataset_53_heart-statlog.csv')
+
+
+def load_vehicle():
+    return load_regular_csv('../dataset_54_vehicle.csv')
+
+
+def load_liver_disorders():
+    return load_regular_csv('../dataset_8_liver-disorders.csv', ignore=2)
+
+
+def load_oil_spill():
+    dataset = pd.read_csv('../phpgEDZ0c.csv')
+    labels = dataset['class']
+    clusters = list(set(labels))
+    del dataset['class']
+    labels = np.array([clusters.index(i) for i in labels])
+    return dataset.values, labels
