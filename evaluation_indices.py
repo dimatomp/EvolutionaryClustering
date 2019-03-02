@@ -63,9 +63,7 @@ def generalized_dunn_index(separation, cohesion):
                 indiv["squareform"] = squareform_m
             matrices = labels[None, :] == cluster_labels[:, None]
             matrices = matrices[:, None, :, None] & matrices[None, :, None, :]
-            square_cls = np.arange(0, len(cluster_labels))
-            square_cls = square_cls[None, :] > square_cls[:, None]
-            matrices = matrices[square_cls, :, :]
+            matrices = matrices[squareform_matrix(len(cluster_labels)), :, :]
             np.logical_or(matrices, np.swapaxes(matrices, 1, 2), out=matrices)
             matrices = matrices[:, squareform_m]
             min_distance = ((dists * matrices).sum(axis=1) / np.count_nonzero(matrices, axis=1)).min()

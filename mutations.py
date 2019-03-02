@@ -116,7 +116,7 @@ def split_eliminate_mutation(indiv: dict) -> dict:
     return indiv
 
 
-def evo_cluster_mutation(separation):
+def evo_cluster_mutation(separation, cohesion):
     def mutation(indiv: dict) -> tuple:
         labels, data = indiv["labels"], indiv["data"]
         clusters = np.unique(labels)
@@ -144,7 +144,7 @@ def evo_cluster_mutation(separation):
                     n_chosen_pairs = len(clusters) // 2
                     if n_chosen_pairs > 1:
                         n_chosen_pairs = np.random.binomial(n_chosen_pairs - 1, 1 / (n_chosen_pairs - 1)) + 1
-                    cohesions = centroid_distance_cohesion(labels=labels, data=data, cluster_labels=clusters, ord=1)
+                    cohesions = cohesion(labels=labels, data=data, indiv=indiv, cluster_labels=clusters, ord=1)
                     cohesions = squareform(cohesions)
                     detail = 'Guided merge of {} pairs of clusters'.format(n_chosen_pairs)
                     for i in range(n_chosen_pairs):
@@ -166,7 +166,7 @@ def evo_cluster_mutation(separation):
                     chosen_clusters = np.random.choice(clusters, n_chosen_clusters, replace=False)
                 else:
                     measures = separation(labels=labels, data=data, indiv=indiv, cluster_labels=clusters, ord=1)
-                    measures = construct_probabilities(measures)
+                    measures = construct_probabilities(measures, the_less_the_better=False)
                     n_clusters = np.count_nonzero(measures)
                     if method == 0:
                         n_clusters = min(n_clusters, len(cluster_sizes) - 1)

@@ -14,7 +14,7 @@ def run_task(args):
     print('Launching', fname, file=sys.stderr)
     index = eval(index)
     with open(fname, 'w') as f:
-        index, sol = run_one_plus_one(random_initialization, mutation,
+        index, sol = run_one_plus_one(axis_initialization, mutation,
                                       index, data,
                                       lambda labels: adjusted_rand_score(clusters, labels['labels']),
                                       n_clusters=len(np.unique(clusters)),
@@ -26,8 +26,9 @@ def run_task(args):
 
 
 if __name__ == "__main__":
-    run_task(['/dev/stdout', 'silhouette_index', normalize_data(generate_random_normal(2000, dim=2, n_clusters=10)),
-              evo_cluster_mutation(density_based_sparseness_separation)])
+    run_task(
+        ['/dev/stdout', 'calinski_harabaz_index', normalize_data(generate_random_normal(2000, dim=2, n_clusters=10)),
+         evo_cluster_mutation(density_based_validity_separation, density_based_separation_cohesion)])
     # datas = [
     #     ('generated_2dim_10cl', generate_random_normal(2000, dim=2, n_clusters=10)),
     #     ('generated_2dim_30cl', generate_random_normal(2000, dim=2, n_clusters=30)),
