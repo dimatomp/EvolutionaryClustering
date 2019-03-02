@@ -138,17 +138,17 @@ def evo_cluster_mutation(separation):
                     mapping = -np.ones(second_part_clusters.max() + 1, dtype='int')
                     mapping[second_part_clusters] = first_part_clusters
                     labels[indices_to_replace] = mapping[labels[indices_to_replace]]
-                    detail = 'Unguided merge of {} pair of clusters'.format(len(first_part_clusters))
+                    detail = 'Unguided merge of {} pairs of clusters'.format(len(first_part_clusters))
                     assert labels.min() >= 0
                 else:
                     n_chosen_pairs = len(clusters) // 2
                     if n_chosen_pairs > 1:
                         n_chosen_pairs = np.random.binomial(n_chosen_pairs - 1, 1 / (n_chosen_pairs - 1)) + 1
-                    cohesion = centroid_distance_cohesion(labels=labels, data=data, cluster_labels=clusters, ord=1)
-                    cohesion = squareform(cohesion)
+                    cohesions = centroid_distance_cohesion(labels=labels, data=data, cluster_labels=clusters, ord=1)
+                    cohesions = squareform(cohesions)
                     detail = 'Guided merge of {} pairs of clusters'.format(n_chosen_pairs)
                     for i in range(n_chosen_pairs):
-                        lin_cohesion = squareform(cohesion)
+                        lin_cohesion = squareform(cohesions)
                         lin_cohesion = construct_probabilities(lin_cohesion)
                         chosen_pair = np.random.choice(len(lin_cohesion), p=lin_cohesion)
                         # TODO No smarter way to do this?
@@ -158,14 +158,14 @@ def evo_cluster_mutation(separation):
                         indices = np.argwhere(bitarray)[0]
                         labels[labels == clusters[indices.max()]] = clusters[indices.min()]
                         labels[labels > clusters[indices.max()]] -= 1
-                        cohesion = np.delete(cohesion, indices.max(), axis=0)
-                        cohesion = np.delete(cohesion, indices.max(), axis=1)
+                        cohesions = np.delete(cohesions, indices.max(), axis=0)
+                        cohesions = np.delete(cohesions, indices.max(), axis=1)
             else:
                 if guided == 0:
                     n_chosen_clusters = np.random.binomial(len(cluster_sizes) - 1, 1 / (len(cluster_sizes) - 1)) + 1
                     chosen_clusters = np.random.choice(clusters, n_chosen_clusters, replace=False)
                 else:
-                    measures = separation(labels=labels, data=data, cluster_labels=clusters, ord=1)
+                    measures = separation(labels=labels, data=data, indiv=indiv, cluster_labels=clusters, ord=1)
                     measures = construct_probabilities(measures)
                     n_clusters = np.count_nonzero(measures)
                     if method == 0:

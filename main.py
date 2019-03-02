@@ -27,7 +27,7 @@ def run_task(args):
 
 if __name__ == "__main__":
     run_task(['/dev/stdout', 'dvcb_index()', normalize_data(generate_random_normal(2000, dim=2, n_clusters=10)),
-              evo_cluster_mutation(mean_centroid_distance_separation)])
+              evo_cluster_mutation(density_based_validity_separation)])
     # datas = [
     #     ('generated_2dim_10cl', generate_random_normal(2000, dim=2, n_clusters=10)),
     #     ('generated_2dim_30cl', generate_random_normal(2000, dim=2, n_clusters=30)),
