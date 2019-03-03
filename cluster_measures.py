@@ -41,7 +41,7 @@ def get_labels_by_prototypes(prototypes, data):
 def diameter_separation(ord=2, **kwargs):
     clusters, centroids = get_clusters_and_centroids(**kwargs)
     points = [d[np.argmax(norm(d - c, axis=1, ord=ord))] for d, c in zip(clusters, centroids)]
-    return [norm(d - p, axis=1).max() for d, p in zip(clusters, points)]
+    return np.array([norm(d - p, axis=1).max() for d, p in zip(clusters, points)])
 
 
 def mean_centroid_distance_separation(ord=2, **kwargs):

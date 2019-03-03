@@ -72,7 +72,7 @@ def load_liver_disorders():
 
 
 def load_oil_spill():
-    dataset = pd.read_csv('../phpgEDZ0c.csv')
+    dataset = pd.read_csv('../phpgEDZOc.csv')
     labels = dataset['class']
     clusters = list(set(labels))
     del dataset['class']
