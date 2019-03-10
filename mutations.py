@@ -266,7 +266,7 @@ def prototype_hill_climbing_mutation(indiv: dict) -> tuple:
     indiv = indiv.copy()
     indiv['prototypes'] = prototypes
     indiv['labels'] = get_labels_by_prototypes(prototypes, data)
-    return indiv, "Add {} and remove {} prototypes".format(n_remove, n_remove)
+    return indiv, "Add {} and remove {} prototypes".format(n_add, n_remove)
 
 
 def knn_reclassification_mutation(indiv: dict) -> tuple:
