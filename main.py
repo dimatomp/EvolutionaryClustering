@@ -112,12 +112,12 @@ if __name__ == "__main__":
         ('prototype_hill_climbing', 'prototype_initialization', 'prototype_hill_climbing_mutation'),
         ('evocluster_validity_separation', 'axis_initialization',
          'evo_cluster_mutation(density_based_validity_separation, density_based_separation_cohesion)'),
-        ('knn_reclassification', 'axis_initialization', 'knn_reclassification_mutation'),
+        # ('knn_reclassification', 'axis_initialization', 'knn_reclassification_mutation'),
         ('evocluster_sparseness_separation', 'axis_initialization',
          'evo_cluster_mutation(density_based_sparseness_separation, density_based_separation_cohesion)'),
         ('split_eliminate', 'axis_initialization', 'split_eliminate_mutation'),
         ('split_merge_move', 'axis_initialization', 'split_merge_move_mutation'),
-        ('one_nth_change', 'axis_initialization', 'one_nth_change_mutation')
+        # ('one_nth_change', 'axis_initialization', 'one_nth_change_mutation')
     ]
     tasks = [('state-of-the-art.txt', 'run_state_of_the_art([datas, indices])')]
     for index_name, index in indices:
