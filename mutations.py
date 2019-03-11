@@ -1,6 +1,7 @@
 from sklearn.neighbors import BallTree
 from cluster_measures import *
 import sys
+import traceback
 
 
 def one_nth_change_move(indiv: dict) -> str:
@@ -19,7 +20,6 @@ def one_nth_change_move(indiv: dict) -> str:
 def trivial_strategy_mutation(strategies):
     strategy_names = strategies
     strategies = list(map(eval, strategies))
-
     def mutation(indiv: dict):
         labels, data = indiv["labels"], indiv["data"]
         labels_backup, labels = labels, labels.copy()
@@ -27,7 +27,13 @@ def trivial_strategy_mutation(strategies):
         indiv['labels'] = labels
         while True:
             strategy_index = np.random.choice(len(strategy_names))
-            detail = "{}: {}".format(strategy_names[strategy_index], strategies[strategy_index](indiv))
+            try:
+                detail = "{}: {}".format(strategy_names[strategy_index], strategies[strategy_index](indiv))
+            except:
+                traceback.print_exc()
+                labels = labels_backup.copy()
+                indiv['labels'] = labels
+                continue
             cleanup_empty_clusters(indiv['labels'])
             if len(np.unique(indiv['labels'])) == 1:
                 print('Tried to leave single cluster with whole dataset', file=sys.stderr)
