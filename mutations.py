@@ -3,7 +3,7 @@ from cluster_measures import *
 import sys
 
 
-def one_nth_change_move(indiv: dict) -> tuple:
+def one_nth_change_move(indiv: dict) -> str:
     labels, data = indiv["labels"], indiv["data"]
     n_entries = np.random.binomial(len(labels) - 1, 1 / (len(labels) - 1)) + 1
     numbers_to_change = np.random.choice(len(labels), n_entries, replace=False)
@@ -12,130 +12,98 @@ def one_nth_change_move(indiv: dict) -> tuple:
     if adding_cluster:
         n_clusters += 1
     labels[numbers_to_change] = np.random.randint(n_clusters, size=n_entries)
-    return indiv, "Reclassify {} entries" + (
+    return "Reclassify {} entries" + (
         '' if not adding_cluster or max(labels[numbers_to_change]) != n_clusters - 1 else ', add new cluster')
 
 
-def split_merge_move_mutation(indiv: dict) -> tuple:
-    labels, data = indiv["labels"], indiv["data"]
-    labels_backup, labels = labels, labels.copy()
-    indiv = indiv.copy()
-    indiv['labels'] = labels
-    while True:
-        method = np.random.randint(3)
-        if method == 0:
-            result, detail = unguided_split_gene_move(indiv)
-        elif method == 1:
-            result, detail = guided_merge_gene_move(centroid_distance_cohesion)(indiv)
-        else:
-            result, detail = expand_cluster_move(indiv)
-        cleanup_empty_clusters(result['labels'])
-        if len(np.unique(result['labels'])) == 1:
-            print('Tried to leave single cluster with whole dataset', file=sys.stderr)
-            labels = labels_backup.copy()
-            indiv['labels'] = labels
-            continue
-        break
+def trivial_strategy_mutation(strategies):
+    strategy_names = strategies
+    strategies = list(map(eval, strategies))
 
-    return result, detail
-
-
-def expand_cluster_move(indiv):
-    # TODO Multiple clusters?
-    labels, data = indiv["labels"], indiv["data"]
-    cluster_sizes = np.bincount(labels)
-    dst_cluster = np.random.randint(len(cluster_sizes))  # - 1)
-    centroid = data[labels == dst_cluster].mean(axis=0)
-    otherElems = labels != dst_cluster  # == src_cluster
-    dists = np.linalg.norm(data[otherElems] - centroid, ord=1, axis=1)
-    dists = construct_probabilities(dists)
-    n_points = np.count_nonzero(dists)
-    n_points = np.random.binomial(n_points - 1, 1 / (n_points - 1)) + 1
-    n_indices = np.random.choice(np.argwhere(otherElems).flatten(), n_points, replace=False, p=dists)
-    labels[n_indices] = dst_cluster
-    return indiv, 'Expand cluster with {} entries'.format(n_points)
-
-
-def split_eliminate_mutation(indiv: dict) -> dict:
-    labels, data = indiv["labels"], indiv["data"]
-    cluster_sizes = np.bincount(labels)
-    labels = labels.copy()
-    while True:
-        method = np.random.randint(3)
-        if method == 0:
-            ex_cluster = np.random.choice(np.argwhere(cluster_sizes > 1).flatten())
-            indices = np.argwhere(labels == ex_cluster).flatten()
-            centroid = data[indices].mean(axis=0)
-            centroid_dists = np.linalg.norm(data[indices] - centroid, axis=1)
-            farthest = data[indices[np.argmax(centroid_dists)]]
-            farthest_dists = np.linalg.norm(data[indices] - farthest, axis=1)
-            n_cluster = farthest_dists < centroid_dists
-            n_cluster_cnt = np.count_nonzero(n_cluster)
-            if n_cluster_cnt == 0 or n_cluster_cnt == len(cluster_sizes):
-                continue
-            labels[labels == ex_cluster] = np.where(n_cluster, len(cluster_sizes), ex_cluster)
-        elif method == 1 and len(cluster_sizes) > 2:
-            centroids = np.array([data[labels == i].mean(axis=0) for i in range(len(cluster_sizes))])
-            ex_cluster = np.random.randint(len(cluster_sizes))
-            indices = np.argwhere(labels == ex_cluster).flatten()
-            centroids = centroids[np.arange(0, len(cluster_sizes)) != ex_cluster]
-            neighbours = np.argmin(cdist(data[indices], centroids), axis=1)
-            neighbours[neighbours >= ex_cluster] += 1
-            labels[indices] = neighbours
-            labels[labels > ex_cluster] -= 1
-        else:
-            dst_cluster = np.random.randint(len(cluster_sizes))
-            centroid = data[labels == dst_cluster].mean(axis=0)
-            otherElems = labels != dst_cluster
-            dists = np.linalg.norm(data[otherElems] - centroid, ord=1, axis=1)
-            dists = construct_probabilities(dists)
-            n_points = np.count_nonzero(dists)
-            n_points = np.random.binomial(n_points - 1, 1 / (n_points - 1)) + 1 if n_points > 1 else 1
-            if n_points == np.count_nonzero(otherElems):
-                continue
-            n_indices = np.random.choice(np.argwhere(otherElems).flatten(), n_points, replace=False, p=dists)
-            labels[n_indices] = dst_cluster
-            cleanup_empty_clusters(labels)
-        break
-    indiv = indiv.copy()
-    indiv["labels"] = labels
-    return indiv
-
-
-def evo_cluster_mutation(separation, cohesion):
-    def mutation(indiv: dict) -> tuple:
+    def mutation(indiv: dict):
         labels, data = indiv["labels"], indiv["data"]
         labels_backup, labels = labels, labels.copy()
         indiv = indiv.copy()
         indiv['labels'] = labels
         while True:
-            guided = np.random.randint(2)
-            method = np.random.randint(3)
-            if method == 1 and guided == 0:
-                result, detail = unguided_merge_gene_move(indiv)
-            elif method == 1 and guided == 1:
-                result, detail = guided_merge_gene_move(cohesion)(indiv)
-            elif guided == 0 and method == 0:
-                result, detail = unguided_remove_and_reclassify_move(indiv)
-            elif guided == 0 and method == 2:
-                result, detail = unguided_split_gene_move(indiv)
-            elif guided == 1 and method == 0:
-                result, detail = guided_remove_and_reclassify_move(separation)(indiv)
-            else:
-                result, detail = guided_split_gene_move(separation)(indiv)
-            cleanup_empty_clusters(result['labels'])
-            if len(np.unique(result['labels'])) == 1:
+            strategy_index = np.random.choice(len(strategy_names))
+            detail = "{}: {}".format(strategy_names[strategy_index], strategies[strategy_index](indiv))
+            cleanup_empty_clusters(indiv['labels'])
+            if len(np.unique(indiv['labels'])) == 1:
                 print('Tried to leave single cluster with whole dataset', file=sys.stderr)
                 labels = labels_backup.copy()
                 indiv['labels'] = labels
                 continue
             break
-        return result, detail
+        return indiv, detail
 
     return mutation
 
 
-def unguided_merge_gene_move(indiv):
+def expand_cluster_move(indiv) -> str:
+    labels, data = indiv["labels"], indiv["data"]
+    clusters = np.unique(labels)
+    dst_clusters = choose_clusters_unguided(clusters)
+    total_n_points = 0
+    # TODO Unroll the loop with numpy?
+    for dst_cluster in dst_clusters:
+        centroid = data[labels == dst_cluster].mean(axis=0)
+        otherElems = labels != dst_cluster  # == src_cluster
+        dists = np.linalg.norm(data[otherElems] - centroid, ord=1, axis=1)
+        dists = construct_probabilities(dists)
+        n_points = np.count_nonzero(dists)
+        n_points = np.random.binomial(n_points - 1, 1 / (n_points - 1)) + 1
+        n_indices = np.random.choice(np.argwhere(otherElems).flatten(), n_points, replace=False, p=dists)
+        labels[n_indices] = dst_cluster
+        total_n_points += n_points
+    return 'Expand {} clusters with {} entries'.format(len(dst_clusters), total_n_points)
+
+
+def split_farthest_move(indiv: dict) -> str:
+    labels, data = indiv["labels"], indiv["data"]
+    clusters = np.unique(labels)
+    ex_clusters = choose_clusters_unguided(clusters)
+    # TODO Unroll with numpy?
+    for i, ex_cluster in enumerate(ex_clusters):
+        indices = np.argwhere(labels == ex_cluster).flatten()
+        centroid = data[indices].mean(axis=0)
+        centroid_dists = np.linalg.norm(data[indices] - centroid, axis=1)
+        farthest = data[indices[np.argmax(centroid_dists)]]
+        farthest_dists = np.linalg.norm(data[indices] - farthest, axis=1)
+        n_cluster = farthest_dists < centroid_dists
+        labels[labels == ex_cluster] = np.where(n_cluster, len(clusters) + i, ex_cluster)
+    return "Split {} clusters".format(len(ex_clusters))
+
+
+def eliminate_move_body(indiv: dict, ex_clusters: np.ndarray) -> str:
+    labels, data = indiv["labels"], indiv["data"]
+    for ex_cluster in ex_clusters:
+        indices = np.argwhere(labels == ex_cluster).flatten()
+        clusters, centroids = get_clusters_and_centroids(labels, data)
+        centroids = centroids[np.arange(0, len(clusters)) != ex_cluster]
+        neighbours = np.argmin(cdist(data[indices], centroids), axis=1)
+        neighbours[neighbours >= ex_cluster] += 1
+        labels[indices] = neighbours
+        labels[labels > ex_cluster] -= 1
+    return 'Eliminate {} clusters'.format(len(ex_clusters))
+
+
+def unguided_eliminate_move(indiv: dict) -> str:
+    return eliminate_move_body(indiv, choose_clusters_unguided(np.unique(indiv['labels'])))
+
+
+def guided_eliminate_move(separation):
+    def mutation(indiv) -> str:
+        labels = indiv['labels']
+        clusters = np.unique(labels)
+        cluster_sizes = np.count_nonzero(labels[:, None] == clusters[None, :], axis=0)
+        return eliminate_move_body(indiv, choose_clusters_guided(labels, indiv['data'], indiv, clusters, separation,
+                                                                 cluster_sizes, False))
+
+    return mutation
+
+
+def unguided_merge_gene_move(indiv) -> str:
     labels, data = indiv["labels"], indiv["data"]
     clusters = np.unique(labels)
     cluster_sizes = np.count_nonzero(labels[:, None] == clusters[None, :], axis=0)
@@ -150,11 +118,11 @@ def unguided_merge_gene_move(indiv):
     mapping[second_part_clusters] = first_part_clusters
     labels[indices_to_replace] = mapping[labels[indices_to_replace]]
     assert labels.min() >= 0
-    return indiv, 'Merge {} pairs of clusters'.format(len(first_part_clusters))
+    return 'Merge {} pairs of clusters'.format(len(first_part_clusters))
 
 
 def guided_merge_gene_move(cohesion):
-    def mutation(indiv):
+    def mutation(indiv) -> str:
         labels, data = indiv["labels"], indiv["data"]
         clusters = np.unique(labels)
         n_chosen_pairs = len(clusters) // 2
@@ -175,21 +143,21 @@ def guided_merge_gene_move(cohesion):
             labels[labels > clusters[indices.max()]] -= 1
             cohesions = np.delete(cohesions, indices.max(), axis=0)
             cohesions = np.delete(cohesions, indices.max(), axis=1)
-        return indiv, 'Merge {} pairs of clusters'.format(n_chosen_pairs)
+        return 'Merge {} pairs of clusters'.format(n_chosen_pairs)
 
     return mutation
 
 
-def choose_clusters_unguided(cluster_sizes, clusters):
-    n_chosen_clusters = np.random.binomial(len(cluster_sizes) - 1, 1 / (len(cluster_sizes) - 1)) + 1
+def choose_clusters_unguided(clusters):
+    n_chosen_clusters = np.random.binomial(len(clusters) - 1, 1 / (len(clusters) - 1)) + 1
     return np.random.choice(clusters, n_chosen_clusters, replace=False)
 
 
-def unguided_split_gene_move(indiv):
+def unguided_split_gene_move(indiv) -> str:
     labels, data = indiv["labels"], indiv["data"]
     clusters = np.unique(labels)
     cluster_sizes = np.count_nonzero(labels[:, None] == clusters[None, :], axis=0)
-    chosen_clusters = choose_clusters_unguided(cluster_sizes, clusters)
+    chosen_clusters = choose_clusters_unguided(clusters)
     for i, ex_cluster in enumerate(chosen_clusters):
         centroid = data[labels == ex_cluster].mean(axis=0)
         norm = np.random.multivariate_normal(np.zeros(len(centroid)), np.identity(len(centroid)))
@@ -197,14 +165,13 @@ def unguided_split_gene_move(indiv):
         ratio = np.random.uniform(dots.min(), dots.max())
         negativeDot = dots < ratio
         labels[labels == ex_cluster] = np.where(negativeDot, len(cluster_sizes) + i, ex_cluster)
-    return indiv, 'Split {} clusters'.format(len(chosen_clusters))
+    return 'Split {} clusters'.format(len(chosen_clusters))
 
 
-def unguided_remove_and_reclassify_move(indiv):
+def unguided_remove_and_reclassify_move(indiv) -> str:
     labels, data = indiv["labels"], indiv["data"]
     clusters = np.unique(labels)
-    cluster_sizes = np.count_nonzero(labels[:, None] == clusters[None, :], axis=0)
-    chosen_clusters = choose_clusters_unguided(cluster_sizes, clusters)
+    chosen_clusters = choose_clusters_unguided(clusters)
     chosen_cluster_labels = chosen_clusters[:, None] == labels[None, :]
     chosen_cluster_counts = np.count_nonzero(chosen_cluster_labels, axis=1)
     n_chosen_samples = np.random.binomial(chosen_cluster_counts - 1,
@@ -214,7 +181,7 @@ def unguided_remove_and_reclassify_move(indiv):
         choice = np.random.choice(np.argwhere(chosen).flatten(), samples, replace=False)
         indices = np.concatenate((indices, choice)) if indices is not None else choice
     labels[indices] = np.random.choice(clusters, len(indices))
-    return indiv, 'Remove and reclassify {} entries'.format(len(indices))
+    return 'Remove and reclassify {} entries'.format(len(indices))
 
 
 def choose_clusters_guided(labels, data, indiv, clusters, separation, cluster_sizes, can_choose_all):
@@ -229,7 +196,7 @@ def choose_clusters_guided(labels, data, indiv, clusters, separation, cluster_si
 
 
 def guided_split_gene_move(separation):
-    def mutation(indiv):
+    def mutation(indiv) -> str:
         labels, data = indiv["labels"], indiv["data"]
         clusters = np.unique(labels)
         cluster_sizes = np.count_nonzero(labels[:, None] == clusters[None, :], axis=0)
@@ -244,17 +211,17 @@ def guided_split_gene_move(separation):
             ratio = np.random.uniform(bins[index], bins[index + 1])
             negativeDot = dots < ratio
             labels[labels == ex_cluster] = np.where(negativeDot, len(cluster_sizes) + i, ex_cluster)
-        return indiv, 'Split {} clusters'.format(len(chosen_clusters))
+        return 'Split {} clusters'.format(len(chosen_clusters))
 
     return mutation
 
 
 def guided_remove_and_reclassify_move(separation):
-    def mutation(indiv):
+    def mutation(indiv) -> str:
         labels, data = indiv["labels"], indiv["data"]
         clusters = np.unique(labels)
         cluster_sizes = np.count_nonzero(labels[:, None] == clusters[None, :], axis=0)
-        chosen_clusters = choose_clusters_guided(labels, data, indiv, clusters, separation, cluster_sizes, True)
+        chosen_clusters = choose_clusters_guided(labels, data, indiv, clusters, separation, cluster_sizes, False)
         chosen_cluster_labels = chosen_clusters[:, None] == labels[None, :]
         chosen_cluster_counts = np.count_nonzero(chosen_cluster_labels, axis=1)
         n_chosen_samples = np.random.binomial(chosen_cluster_counts - 1,
@@ -269,7 +236,7 @@ def guided_remove_and_reclassify_move(separation):
         centroid_dists = cdist(data[indices], centroids, metric='minkowski')
         # TODO How about randomness?
         labels[indices] = other_clusters[centroid_dists.argmin(axis=1)]
-        return indiv, 'Remove and reclassify of {} entries'.format(len(indices))
+        return 'Remove and reclassify of {} entries'.format(len(indices))
 
     return mutation
 
@@ -320,29 +287,46 @@ def prototype_hill_climbing_mutation(indiv: dict) -> tuple:
     return indiv, "Add {} and remove {} prototypes".format(n_add, n_remove)
 
 
-def knn_reclassification_move(indiv: dict) -> tuple:
+def knn_reclassification_move(indiv: dict) -> str:
     if 'tree' in indiv:
         ball_tree = indiv['tree']
     else:
         ball_tree = BallTree(indiv['data'])
         indiv['tree'] = ball_tree
     data, labels = indiv['data'], indiv['labels']
-    method = np.random.randint(3)
+    method = np.random.randint(2)
     clusters = np.unique(labels)
-    if method >= 1 or len(clusters) == 2:
-        n_centers = np.random.binomial(len(data) - 1, 1 / (len(data) - 1)) + 1
-        indices_to_move = np.random.choice(len(data), n_centers, replace=False)
-        g = np.random.randint(1, len(data) // len(clusters))
-        indices_to_move = ball_tree.query(data[indices_to_move], k=g)[1]
-        n_clusters = len(clusters)
-        if method == 2:
-            n_clusters += 1
-        for i, row in enumerate(indices_to_move):
-            labels[row] = np.random.choice(n_clusters) if i != 0 or method == 1 else n_clusters - 1
-        detail = 'Move {} centers, {} entries in total, g={}'.format(n_centers,
-                                                                     len(np.unique(indices_to_move.flatten())), g)
-    else:
-        f, t = np.random.choice(clusters, 2, replace=False)
-        labels[labels == f] = t
-        detail = 'Merge clusters'
-    return indiv, detail
+    n_centers = np.random.binomial(len(data) - 1, 1 / (len(data) - 1)) + 1
+    indices_to_move = np.random.choice(len(data), n_centers, replace=False)
+    g = np.random.randint(1, len(data) // len(clusters))
+    indices_to_move = ball_tree.query(data[indices_to_move], k=g)[1]
+    n_clusters = len(clusters)
+    if method == 1:
+        n_clusters += 1
+    for i, row in enumerate(indices_to_move):
+        labels[row] = np.random.choice(n_clusters) if i != 0 or method == 1 else n_clusters - 1
+    detail = 'Move {} centers, {} entries in total, g={}'.format(n_centers,
+                                                                 len(np.unique(indices_to_move.flatten())), g)
+    return detail
+
+
+split_merge_move_mutation = trivial_strategy_mutation(
+    ['unguided_split_gene_move', 'guided_merge_gene_move(centroid_distance_cohesion)', 'expand_cluster_move'])
+split_eliminate_mutation = trivial_strategy_mutation(
+    ['split_farthest_move', 'unguided_eliminate_move', 'expand_cluster_move'])
+
+
+def evo_cluster_mutation(separation, cohesion):
+    return trivial_strategy_mutation(['unguided_merge_gene_move', 'guided_merge_gene_move({})'.format(cohesion),
+                                      'unguided_remove_and_reclassify_move', 'unguided_split_gene_move',
+                                      'guided_remove_and_reclassify_move({})'.format(separation),
+                                      'guided_split_gene_move({})'.format(separation)])
+
+
+def all_moves_mutation(separation, cohesion):
+    return trivial_strategy_mutation(['unguided_merge_gene_move', 'guided_merge_gene_move({})'.format(cohesion),
+                                      'unguided_remove_and_reclassify_move', 'unguided_split_gene_move',
+                                      'guided_remove_and_reclassify_move({})'.format(separation),
+                                      'guided_split_gene_move({})'.format(separation), 'expand_cluster_move',
+                                      'split_farthest_move', 'unguided_eliminate_move',
+                                      'guided_eliminate_move({})'.format(separation), 'knn_reclassification_move'])
