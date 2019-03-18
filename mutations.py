@@ -281,7 +281,15 @@ def centroid_hill_climbing_move(indiv: Individual) -> str:
     return 'Alter centroid by delta {}'.format(delta)
 
 
-def prototype_hill_climbing_mutation(indiv: dict) -> tuple:
+def prototype_hill_climbing_move(indiv: Individual) -> str:
+    if 'prototypes' not in indiv:
+        data = indiv['data']
+        clusters, centroids = get_clusters_and_centroids(indiv['labels'], data)
+        prototype_indices = cdist(data, centroids).argmin(axis=0)
+        prototypes = np.isin(np.arange(len(data)), prototype_indices)
+        indiv.set_partition_field('prototypes', prototypes)
+        indiv.set_partition_field('labels', get_labels_by_prototypes(prototypes, data))
+        return 'Initialize prototypes'
     prototypes, data = indiv['prototypes'], indiv['data']
     prototypes = prototypes.copy()
     n_prototypes = np.count_nonzero(prototypes)
@@ -292,10 +300,9 @@ def prototype_hill_climbing_mutation(indiv: dict) -> tuple:
         prototypes[np.random.choice(np.argwhere(~prototypes).flatten(), n_add, replace=False)] = True
     if n_remove > 0:
         prototypes[np.random.choice(np.argwhere(prototypes).flatten(), n_remove, replace=False)] = False
-    indiv = indiv.copy()
-    indiv['prototypes'] = prototypes
-    indiv['labels'] = get_labels_by_prototypes(prototypes, data)
-    return indiv, "Add {} and remove {} prototypes".format(n_add, n_remove)
+    indiv.set_partition_field('prototypes', prototypes)
+    indiv.set_partition_field('labels', get_labels_by_prototypes(prototypes, data))
+    return "Add {} and remove {} prototypes".format(n_add, n_remove)
 
 
 def knn_reclassification_move(indiv: Individual) -> str:
@@ -348,4 +355,5 @@ def all_moves_mutation(separation=None, cohesion=None):
     return trivial_strategy_mutation(
         ['unguided_merge_gene_move', 'unguided_remove_and_reclassify_move', 'unguided_split_gene_move',
          'expand_cluster_move', 'split_farthest_move', 'unguided_eliminate_move', 'knn_reclassification_move',
-         'one_nth_change_move', 'centroid_hill_climbing_move'] + separation_moves + cohesion_moves)
+         'one_nth_change_move', 'centroid_hill_climbing_move', 'prototype_hill_climbing_move'] + separation_moves +
+        cohesion_moves)
