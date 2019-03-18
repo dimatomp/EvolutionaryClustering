@@ -22,7 +22,8 @@ def csv_logging(output=None, log_unsuccessful=False):
 
     def logging(n_step, c_index, c_solution, n_mutations, ground_truth, minor, success, time, detail):
         if not log_unsuccessful and not success: return
-        print(n_step, c_index, ground_truth, n_mutations, len(np.unique(c_solution["labels"])), time, detail, sep=',')
+        print(n_step, c_index, ground_truth, n_mutations, len(np.unique(c_solution["labels"])), time, detail, sep=',',
+              file=output or sys.stdout)
         if output is not None:
             output.flush()
 

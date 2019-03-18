@@ -44,15 +44,15 @@ def run_state_of_the_art(args):
     print('Finished state-of-the-art.txt', file=sys.stderr)
 
 
-def run_task(fname, index, datas, initialization, mutation, logging):
+def run_task(fname, index, datas, initialization, mutation, logging=None):
     data, clusters = datas
     print('Launching', fname, file=sys.stderr)
     with open(fname, 'w') as f:
         try:
+            logging = logging(f) if logging is not None else csv_logging(f, log_unsuccessful=True)
             if test_mode:
                 print('Loaded', fname, file=f)
                 return
-            logging = logging(f)
             start = time()
             index, sol = run_one_plus_one(initialization, mutation,
                                           index, data,
@@ -100,35 +100,38 @@ if __name__ == "__main__":
         # ('generalized_dunn_33', 'generalized_dunn_index(separation="mean_per_point", cohension="mean_distance")'),
     ]
     mutations = [
-        ('evocluster_diameter_centroid', 'axis_initialization',
-         'evo_cluster_mutation(diameter_separation, centroid_distance_cohesion)'),
-        ('evocluster_mean_centroid', 'axis_initialization',
-         'evo_cluster_mutation(mean_centroid_distance_separation, centroid_distance_cohesion)'),
-        ('evocluster_validity_centroid', 'axis_initialization',
-         'evo_cluster_mutation(density_based_validity_separation, centroid_distance_cohesion)'),
-        ('evocluster_sparseness_centroid', 'axis_initialization',
-         'evo_cluster_mutation(density_based_sparseness_separation, centroid_distance_cohesion)'),
+        ## These mutations no longer exist
         # ('centroid_hill_climbing', 'centroid_initialization', 'centroid_hill_climbing_mutation'),
         # ('prototype_hill_climbing', 'prototype_initialization', 'prototype_hill_climbing_mutation'),
-        ('evocluster_validity_separation', 'axis_initialization',
-         'evo_cluster_mutation(density_based_validity_separation, density_based_separation_cohesion)'),
         # ('knn_reclassification', 'axis_initialization', 'knn_reclassification_mutation'),
-        ('evocluster_sparseness_separation', 'axis_initialization',
-         'evo_cluster_mutation(density_based_sparseness_separation, density_based_separation_cohesion)'),
-        ('split_eliminate', 'axis_initialization', 'split_eliminate_mutation'),
-        ('split_merge_move', 'axis_initialization', 'split_merge_move_mutation'),
         # ('one_nth_change', 'axis_initialization', 'one_nth_change_mutation')
+        ## These mutations are obsolete
+        # ('evocluster_diameter_centroid', 'axis_initialization',
+        #  'evo_cluster_mutation(diameter_separation, centroid_distance_cohesion)'),
+        # ('evocluster_mean_centroid', 'axis_initialization',
+        #  'evo_cluster_mutation(mean_centroid_distance_separation, centroid_distance_cohesion)'),
+        # ('evocluster_validity_centroid', 'axis_initialization',
+        #  'evo_cluster_mutation(density_based_validity_separation, centroid_distance_cohesion)'),
+        # ('evocluster_sparseness_centroid', 'axis_initialization',
+        #  'evo_cluster_mutation(density_based_sparseness_separation, centroid_distance_cohesion)'),
+        # ('evocluster_validity_separation', 'axis_initialization',
+        #  'evo_cluster_mutation(density_based_validity_separation, density_based_separation_cohesion)'),
+        # ('evocluster_sparseness_separation', 'axis_initialization',
+        #  'evo_cluster_mutation(density_based_sparseness_separation, density_based_separation_cohesion)'),
+        # ('split_eliminate', 'axis_initialization', 'split_eliminate_mutation'),
+        # ('split_merge_move', 'axis_initialization', 'split_merge_move_mutation'),
+        ('all_mutations_trivial', 'axis_initialization', 'all_moves_mutation(silent=True)')
     ]
-    tasks = [('state-of-the-art.txt', 'run_state_of_the_art([datas, indices])')]
+    # tasks = [('state-of-the-art.txt', 'run_state_of_the_art([datas, indices])')]
+    tasks = []
     for index_name, index in indices:
         eval(index)
         for data_name, data in datas:
             for mutation_name, init, mutation in mutations:
                 fname = '{}-{}-{}.txt'.format(index_name, data_name, mutation_name)
                 tasks.append((fname,
-                              "run_task(output_prefix + '/' + '{}', {}, {}, {}, {}, csv_logging)".format(fname, index,
-                                                                                                         data, init,
-                                                                                                         mutation)))
+                              "run_task(output_prefix + '/' + '{}', {}, {}, {}, {})".format(fname, index, data, init,
+                                                                                            mutation)))
     if len(sys.argv) == 1:
         print('Total', len(tasks), 'tasks to run')
     elif len(sys.argv) == 2:

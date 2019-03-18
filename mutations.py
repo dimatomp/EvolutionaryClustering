@@ -29,7 +29,7 @@ def one_nth_change_move(indiv: Individual) -> str:
         '' if not adding_cluster or max(labels[numbers_to_change]) != n_clusters - 1 else ', add new cluster')
 
 
-def trivial_strategy_mutation(strategies):
+def trivial_strategy_mutation(strategies, silent=False):
     strategy_names = strategies
     strategies = list(map(eval, strategies))
 
@@ -41,7 +41,8 @@ def trivial_strategy_mutation(strategies):
                 detail = "{}: {}".format(strategy_names[strategy_index], strategies[strategy_index](indiv))
                 cleanup_empty_clusters(indiv['labels'])
             except MutationNotApplicable:
-                print('Mutation {} not applicable'.format(strategy_names[strategy_index]), file=sys.stderr)
+                if not silent:
+                    print('Mutation {} not applicable'.format(strategy_names[strategy_index]), file=sys.stderr)
                 indiv = indiv_backup.copy()
                 continue
             except:
@@ -49,7 +50,8 @@ def trivial_strategy_mutation(strategies):
                 indiv = indiv_backup.copy()
                 continue
             if len(np.unique(indiv['labels'])) == 1:
-                print('Tried to leave single cluster with whole dataset', file=sys.stderr)
+                if not silent:
+                    print('Tried to leave single cluster with whole dataset', file=sys.stderr)
                 indiv = indiv_backup.copy()
                 continue
             break
@@ -70,7 +72,7 @@ def expand_cluster_move(indiv: Individual) -> str:
         dists = np.linalg.norm(data[otherElems] - centroid, ord=1, axis=1)
         dists = construct_probabilities(dists)
         n_points = np.count_nonzero(dists)
-        n_points = np.random.binomial(n_points - 1, 1 / (n_points - 1)) + 1
+        n_points = (np.random.binomial(n_points - 1, 1 / (n_points - 1)) if n_points > 1 else 0) + 1
         n_indices = np.random.choice(np.argwhere(otherElems).flatten(), n_points, replace=False, p=dists)
         labels[n_indices] = dst_cluster
         total_n_points += n_points
@@ -107,7 +109,7 @@ def eliminate_move_body(indiv: Individual, ex_clusters: np.ndarray) -> str:
 
 
 def unguided_eliminate_move(indiv: dict) -> str:
-    return eliminate_move_body(indiv, choose_clusters_unguided(np.unique(indiv['labels'])))
+    return eliminate_move_body(indiv, choose_clusters_unguided(np.unique(indiv['labels']), can_choose_all=False))
 
 
 def guided_eliminate_move(separation):
@@ -124,6 +126,8 @@ def guided_eliminate_move(separation):
 def unguided_merge_gene_move(indiv: Individual) -> str:
     labels, data = copy_labels(indiv)
     clusters = np.unique(labels)
+    if len(clusters) == 2:
+        raise MutationNotApplicable
     cluster_sizes = np.count_nonzero(labels[:, None] == clusters[None, :], axis=0)
     n_chosen_clusters = np.random.binomial(len(cluster_sizes) - 2, 1 / (len(cluster_sizes) - 2)) + 2
     chosen_clusters = np.random.choice(clusters, n_chosen_clusters, replace=False)
@@ -166,8 +170,9 @@ def guided_merge_gene_move(cohesion):
     return mutation
 
 
-def choose_clusters_unguided(clusters):
-    n_chosen_clusters = np.random.binomial(len(clusters) - 1, 1 / (len(clusters) - 1)) + 1
+def choose_clusters_unguided(clusters, can_choose_all=True):
+    diff = len(clusters) - 1 if can_choose_all else len(clusters) - 2
+    n_chosen_clusters = (np.random.binomial(diff, 1 / diff) if diff > 0 else 0) + 1
     return np.random.choice(clusters, n_chosen_clusters, replace=False)
 
 
@@ -347,7 +352,7 @@ separation_move_names = ['guided_remove_and_reclassify_move', 'guided_split_gene
 all_separation_moves = list(chain(*(['{}({})'.format(j, i) for i in all_separations] for j in separation_move_names)))
 
 
-def all_moves_mutation(separation=None, cohesion=None):
+def all_moves_mutation(separation=None, cohesion=None, silent=False):
     separation_moves = all_separation_moves if separation is None else ['{}({})'.format(j, separation) for j in
                                                                         separation_move_names]
     cohesion_moves = all_cohesion_moves if cohesion is None else ['{}({})'.format(j, cohesion) for j in
@@ -356,4 +361,4 @@ def all_moves_mutation(separation=None, cohesion=None):
         ['unguided_merge_gene_move', 'unguided_remove_and_reclassify_move', 'unguided_split_gene_move',
          'expand_cluster_move', 'split_farthest_move', 'unguided_eliminate_move', 'knn_reclassification_move',
          'one_nth_change_move', 'centroid_hill_climbing_move', 'prototype_hill_climbing_move'] + separation_moves +
-        cohesion_moves)
+        cohesion_moves, silent=silent)
