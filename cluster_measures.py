@@ -2,6 +2,7 @@ import numpy as np
 from numpy.linalg import norm
 from scipy.spatial.distance import pdist, cdist, squareform
 from scipy.sparse.csgraph import minimum_spanning_tree
+from individual import Individual
 
 
 def get_clusters_and_centroids(labels=None, data=None, cluster_labels=None, clusters=None, centroids=None, **kwargs):
@@ -17,13 +18,13 @@ def cleanup_empty_clusters(labels):
     labels -= np.cumsum(np.bincount(labels) == 0)[labels]
 
 
-def cache_distances(indiv, ord=2):
+def cache_distances(indiv: Individual, ord=2):
     name = "distances" if ord == 2 else "distances_" + str(ord)
     if name in indiv:
         distances = indiv[name]
     else:
         distances = pdist(indiv["data"])
-        indiv[name] = distances
+        indiv.set_data_field(name, distances)
     return distances
 
 
