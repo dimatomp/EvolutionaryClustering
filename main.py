@@ -44,21 +44,21 @@ def run_state_of_the_art(args):
     print('Finished state-of-the-art.txt', file=sys.stderr)
 
 
-
-def run_task(args):
-    fname, index, (data, clusters), initialization, mutation = args
+def run_task(fname, index, datas, initialization, mutation, logging):
+    data, clusters = datas
     print('Launching', fname, file=sys.stderr)
     with open(fname, 'w') as f:
         try:
             if test_mode:
                 print('Loaded', fname, file=f)
                 return
+            logging = logging(f)
             start = time()
             index, sol = run_one_plus_one(initialization, mutation,
                                           index, data,
                                           lambda labels: adjusted_rand_score(clusters, labels['labels']),
                                           n_clusters=len(np.unique(clusters)),
-                                          logging=default_logging(f))
+                                          logging=logging)
             print('Running time', time() - start, 'seconds', file=f)
             print('Resulting index value', index, file=f)
             print(list(sol["labels"]), file=f)
@@ -126,8 +126,9 @@ if __name__ == "__main__":
             for mutation_name, init, mutation in mutations:
                 fname = '{}-{}-{}.txt'.format(index_name, data_name, mutation_name)
                 tasks.append((fname,
-                              "run_task([output_prefix + '/' + '{}', {}, {}, {}, {}])".format(fname, index, data, init,
-                                                                                              mutation)))
+                              "run_task(output_prefix + '/' + '{}', {}, {}, {}, {}, csv_logging)".format(fname, index,
+                                                                                                         data, init,
+                                                                                                         mutation)))
     if len(sys.argv) == 1:
         print('Total', len(tasks), 'tasks to run')
     elif len(sys.argv) == 2:

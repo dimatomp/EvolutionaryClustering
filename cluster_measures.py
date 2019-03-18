@@ -130,7 +130,8 @@ def density_based_cluster_validity(dists, labels, d=2):
     cluster_sparseness = density_based_cluster_sparseness(dists, labels, internal_nodes_list, msts, d=d)
     internal_labels, internal_dists, internal_matrices = density_based_internal_dists(dists, labels,
                                                                                       reach_dists=reach_dists,
-                                                                                      cluster_internals=cluster_internals, d=d)
+                                                                                      cluster_internals=cluster_internals,
+                                                                                      d=d)
     matrices = np.logical_xor(internal_matrices[:, :, None], internal_matrices[:, None, :])
     matrices = matrices[:, squareform_matrix(len(internal_labels))]
     internal_dists = internal_dists * matrices
@@ -146,6 +147,11 @@ def density_based_validity_separation(labels, indiv, ord=2, **kwargs):
 def centroid_distance_cohesion(ord=2, **kwargs):
     clusters, centroids = get_clusters_and_centroids(**kwargs)
     return pdist(centroids, metric='minkowski', p=ord)
+
+
+all_cohesions = ['centroid_distance_cohesion', 'density_based_separation_cohesion']
+all_separations = ['density_based_validity_separation', 'density_based_sparseness_separation',
+                   'mean_centroid_distance_separation', 'diameter_separation']
 
 
 def construct_probabilities(values, the_less_the_better=True):

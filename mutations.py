@@ -1,7 +1,11 @@
 from sklearn.neighbors import BallTree
 from cluster_measures import *
+from itertools import chain
 import sys
 import traceback
+
+
+class MutationNotApplicable(Exception): pass
 
 
 def one_nth_change_move(indiv: dict) -> str:
@@ -13,13 +17,14 @@ def one_nth_change_move(indiv: dict) -> str:
     if adding_cluster:
         n_clusters += 1
     labels[numbers_to_change] = np.random.randint(n_clusters, size=n_entries)
-    return "Reclassify {} entries" + (
+    return "Reclassify {} entries".format(n_entries) + (
         '' if not adding_cluster or max(labels[numbers_to_change]) != n_clusters - 1 else ', add new cluster')
 
 
 def trivial_strategy_mutation(strategies):
     strategy_names = strategies
     strategies = list(map(eval, strategies))
+
     def mutation(indiv: dict):
         labels, data = indiv["labels"], indiv["data"]
         labels_backup, labels = labels, labels.copy()
@@ -29,6 +34,10 @@ def trivial_strategy_mutation(strategies):
             strategy_index = np.random.choice(len(strategy_names))
             try:
                 detail = "{}: {}".format(strategy_names[strategy_index], strategies[strategy_index](indiv))
+            except MutationNotApplicable:
+                labels = labels_backup.copy()
+                indiv['labels'] = labels
+                continue
             except:
                 traceback.print_exc()
                 labels = labels_backup.copy()
@@ -329,10 +338,18 @@ def evo_cluster_mutation(separation, cohesion):
                                       'guided_split_gene_move({})'.format(separation)])
 
 
-def all_moves_mutation(separation, cohesion):
-    return trivial_strategy_mutation(['unguided_merge_gene_move', 'guided_merge_gene_move({})'.format(cohesion),
-                                      'unguided_remove_and_reclassify_move', 'unguided_split_gene_move',
-                                      'guided_remove_and_reclassify_move({})'.format(separation),
-                                      'guided_split_gene_move({})'.format(separation), 'expand_cluster_move',
-                                      'split_farthest_move', 'unguided_eliminate_move',
-                                      'guided_eliminate_move({})'.format(separation), 'knn_reclassification_move'])
+cohesion_move_names = ['guided_merge_gene_move']
+all_cohesion_moves = list(chain(*(['{}({})'.format(j, i) for i in all_cohesions] for j in cohesion_move_names)))
+separation_move_names = ['guided_remove_and_reclassify_move', 'guided_split_gene_move', 'guided_eliminate_move']
+all_separation_moves = list(chain(*(['{}({})'.format(j, i) for i in all_separations] for j in separation_move_names)))
+
+
+def all_moves_mutation(separation=None, cohesion=None):
+    separation_moves = all_separation_moves if separation is None else ['{}({})'.format(j, separation) for j in
+                                                                        separation_move_names]
+    cohesion_moves = all_cohesion_moves if cohesion is None else ['{}({})'.format(j, cohesion) for j in
+                                                                  cohesion_move_names]
+    return trivial_strategy_mutation(
+        ['unguided_merge_gene_move', 'unguided_remove_and_reclassify_move', 'unguided_split_gene_move',
+         'expand_cluster_move', 'split_farthest_move', 'unguided_eliminate_move', 'knn_reclassification_move',
+         'one_nth_change_move'] + separation_moves + cohesion_moves)
