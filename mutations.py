@@ -39,14 +39,15 @@ def trivial_strategy_mutation(strategies):
             strategy_index = np.random.choice(len(strategy_names))
             try:
                 detail = "{}: {}".format(strategy_names[strategy_index], strategies[strategy_index](indiv))
+                cleanup_empty_clusters(indiv['labels'])
             except MutationNotApplicable:
+                print('Mutation {} not applicable'.format(strategy_names[strategy_index]), file=sys.stderr)
                 indiv = indiv_backup.copy()
                 continue
             except:
                 traceback.print_exc()
                 indiv = indiv_backup.copy()
                 continue
-            cleanup_empty_clusters(indiv['labels'])
             if len(np.unique(indiv['labels'])) == 1:
                 print('Tried to leave single cluster with whole dataset', file=sys.stderr)
                 indiv = indiv_backup.copy()
@@ -258,33 +259,26 @@ def guided_remove_and_reclassify_move(separation):
     return mutation
 
 
-def centroid_hill_climbing_mutation(indiv: dict) -> tuple:
-    while True:
-        centroids, data = indiv['centroids'], indiv['data']
-        method = np.random.choice(3)
-        if method == 0:
-            shape = centroids.shape
-            centroids = centroids.flatten()
-            delta = np.random.uniform(-1, 1)
-            index = np.random.choice(len(centroids))
-            centroids[index] = 2 * delta if centroids[index] == 0 else (1 + 2 * delta) * centroids[index]
-            centroids = centroids.reshape(shape)
-            detail = 'Alter centroid by delta {}'.format(delta)
-        elif method == 1 and len(centroids) > 2:
-            centroids = np.delete(centroids, np.random.choice(len(centroids)), axis=0)
-            detail = 'Remove centroid'
-        else:
-            mindata, maxdata = data.min(axis=0), data.max(axis=0)
-            centroids = np.concatenate(
-                [centroids, [np.random.sample(centroids.shape[1]) * (maxdata - mindata) + mindata]])
-            detail = 'Add centroid'
+def centroid_hill_climbing_move(indiv: Individual) -> str:
+    if 'centroids' not in indiv:
+        data = indiv['data']
+        centroids = get_clusters_and_centroids(indiv['labels'], data)[1]
         labels, centroids = get_labels_by_centroids(centroids, data)
-        if labels.max() == 0:
-            continue
-        indiv = indiv.copy()
-        indiv['centroids'] = centroids
-        indiv['labels'] = labels
-        return indiv, detail
+        indiv.set_partition_field('centroids', centroids)
+        indiv.set_partition_field('labels', labels)
+        return 'Initialize centroids'
+    centroids, data = indiv['centroids'], indiv['data']
+    centroids = centroids.copy()
+    shape = centroids.shape
+    centroids = centroids.flatten()
+    delta = np.random.uniform(-1, 1)
+    index = np.random.choice(len(centroids))
+    centroids[index] = 2 * delta if centroids[index] == 0 else (1 + 2 * delta) * centroids[index]
+    centroids = centroids.reshape(shape)
+    labels, centroids = get_labels_by_centroids(centroids, data)
+    indiv.set_partition_field('labels', labels)
+    indiv.set_partition_field('centroids', centroids)
+    return 'Alter centroid by delta {}'.format(delta)
 
 
 def prototype_hill_climbing_mutation(indiv: dict) -> tuple:
@@ -354,4 +348,4 @@ def all_moves_mutation(separation=None, cohesion=None):
     return trivial_strategy_mutation(
         ['unguided_merge_gene_move', 'unguided_remove_and_reclassify_move', 'unguided_split_gene_move',
          'expand_cluster_move', 'split_farthest_move', 'unguided_eliminate_move', 'knn_reclassification_move',
-         'one_nth_change_move'] + separation_moves + cohesion_moves)
+         'one_nth_change_move', 'centroid_hill_climbing_move'] + separation_moves + cohesion_moves)
