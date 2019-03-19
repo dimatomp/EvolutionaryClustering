@@ -65,8 +65,12 @@ def expand_cluster_move(indiv: Individual) -> str:
     clusters = np.unique(labels)
     dst_clusters = choose_clusters_unguided(clusters)
     total_n_points = 0
+    n_chosen_clusters = choose_n_clusters(len(clusters))
     # TODO Unroll the loop with numpy?
-    for dst_cluster in dst_clusters:
+    for i in range(n_chosen_clusters):
+        if len(clusters) == 1:
+            raise MutationNotApplicable
+        dst_cluster = np.random.choice(clusters)
         centroid = data[labels == dst_cluster].mean(axis=0)
         otherElems = labels != dst_cluster  # == src_cluster
         dists = np.linalg.norm(data[otherElems] - centroid, ord=1, axis=1)
@@ -76,6 +80,7 @@ def expand_cluster_move(indiv: Individual) -> str:
         n_indices = np.random.choice(np.argwhere(otherElems).flatten(), n_points, replace=False, p=dists)
         labels[n_indices] = dst_cluster
         total_n_points += n_points
+        clusters = np.unique(labels)
     return 'Expand {} clusters with {} entries'.format(len(dst_clusters), total_n_points)
 
 
@@ -170,10 +175,13 @@ def guided_merge_gene_move(cohesion):
     return mutation
 
 
+def choose_n_clusters(n_clusters, can_choose_all=True):
+    diff = n_clusters - 1 if can_choose_all else n_clusters - 2
+    return (np.random.binomial(diff, 1 / diff) if diff > 0 else 0) + 1
+
+
 def choose_clusters_unguided(clusters, can_choose_all=True):
-    diff = len(clusters) - 1 if can_choose_all else len(clusters) - 2
-    n_chosen_clusters = (np.random.binomial(diff, 1 / diff) if diff > 0 else 0) + 1
-    return np.random.choice(clusters, n_chosen_clusters, replace=False)
+    return np.random.choice(clusters, choose_n_clusters(len(clusters), can_choose_all=can_choose_all), replace=False)
 
 
 def unguided_split_gene_move(indiv: Individual) -> str:

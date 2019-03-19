@@ -157,6 +157,8 @@ all_separations = ['density_based_validity_separation', 'density_based_sparsenes
 
 def construct_probabilities(values, the_less_the_better=True):
     # values = np.exp(-values - np.log(np.exp(-values).sum()))
+    if len(values) == 1:
+        return np.ones(1)
     if the_less_the_better:
         values = values.max() - values
     return values / values.sum()
