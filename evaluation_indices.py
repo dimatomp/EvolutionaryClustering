@@ -66,7 +66,8 @@ def generalized_dunn_index(separation, cohesion):
             matrices = matrices[squareform_matrix(len(cluster_labels)), :, :]
             np.logical_or(matrices, np.swapaxes(matrices, 1, 2), out=matrices)
             matrices = matrices[:, squareform_m]
-            min_distance = ((dists * matrices).sum(axis=1) / np.count_nonzero(matrices, axis=1)).min()
+            dists = np.where(matrices, dists, 0)
+            min_distance = (dists.sum(axis=1) / np.count_nonzero(matrices, axis=1)).min()
         elif separation == "centroid_distance":
             min_distance = centroid_distance_cohesion(clusters=clusters, centroids=centroids).min()
         elif separation == "mean_per_cluster":

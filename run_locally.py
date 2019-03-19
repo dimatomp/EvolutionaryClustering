@@ -1,6 +1,6 @@
 from main import *
 
 if __name__ == '__main__':
-    run_task('/dev/stdout', calinski_harabaz_index, normalize_data(generate_random_normal(2000, dim=2, n_clusters=30)),
-             axis_initialization,
-             all_moves_dynamic_mutation(), lambda f: csv_logging(output=f, log_unsuccessful=False))
+    run_task('/dev/stdout', generalized_dunn_index(separation="single_linkage", cohesion="mean_distance"),
+             normalize_data(load_liver_disorders()), axis_initialization, all_moves_mutation(),
+             lambda f: csv_logging(output=f, log_unsuccessful=False))

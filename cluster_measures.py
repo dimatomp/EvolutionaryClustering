@@ -68,8 +68,7 @@ def density_based_dists_and_internals(dists, labels, d=2):
         cluster_dist = np.where(cluster_dist != 0, cluster_dist ** (-d), 0)
         if (np.count_nonzero(labels_mask)) > 1:
             coredist[labels_mask] = (cluster_dist.sum(axis=1) / (cluster_dist.shape[1] - 1)) ** (-1 / d)
-        if np.isnan(coredist).any():
-            assert False
+        assert not np.isnan(coredist).any and (coredist != np.inf).all()
     reach_dists = squareform(np.maximum(coredist[:, None], coredist[None, :]), checks=False)
     reach_dists = np.maximum(reach_dists, dists)
     cluster_internals = np.zeros(len(labels), dtype='bool')
@@ -103,8 +102,8 @@ def density_based_separation_cohesion(labels, indiv, ord=2, **kwargs):
     matrices = matrices[squareform_matrix(matrices.shape[0]), :, :]
     np.logical_or(matrices, np.swapaxes(matrices, 1, 2), out=matrices)
     matrices = matrices[:, squareform_matrix(matrices.shape[2])]
-    internal_dists = internal_dists * matrices
-    return np.where(internal_dists != 0, internal_dists, np.inf).min(axis=1)
+    internal_dists = np.where(matrices, internal_dists, np.inf)
+    return internal_dists.min(axis=1)
 
 
 def density_based_cluster_sparseness(dists, labels, internal_nodes_list=None, msts=None, d=2):
@@ -135,8 +134,8 @@ def density_based_cluster_validity(dists, labels, d=2):
                                                                                       d=d)
     matrices = np.logical_xor(internal_matrices[:, :, None], internal_matrices[:, None, :])
     matrices = matrices[:, squareform_matrix(len(internal_labels))]
-    internal_dists = internal_dists * matrices
-    cluster_separation = np.where(internal_dists != 0, internal_dists, np.inf).min(axis=1)
+    internal_dists = np.where(matrices, internal_dists, np.inf)
+    cluster_separation = internal_dists.min(axis=1)
     return (cluster_separation - cluster_sparseness) / np.maximum(cluster_separation, cluster_sparseness)
 
 

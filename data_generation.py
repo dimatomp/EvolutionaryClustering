@@ -27,7 +27,8 @@ def load_generated_random_normal(max_points, dim=None, n_clusters=None, prefix='
 
 
 def normalize_data(dataset):
-    return normalize(dataset[0], axis=0), dataset[1]
+    unique, indices = np.unique(dataset[0], return_index=True, axis=0)
+    return normalize(unique, axis=0), dataset[1][indices]
 
 
 def load_immunotherapy(prefix='.'):

@@ -377,7 +377,7 @@ def knn_reclassification_move(indiv: Individual) -> str:
     clusters = np.unique(labels)
     n_centers = np.random.binomial(len(data) - 1, 1 / (len(data) - 1)) + 1
     indices_to_move = np.random.choice(len(data), n_centers, replace=False)
-    g = np.random.randint(1, len(data) // len(clusters))
+    g = np.random.randint(1, max(2, len(data) // len(clusters)))
     indices_to_move = ball_tree.query(data[indices_to_move], k=g)[1]
     n_clusters = len(clusters)
     if method == 1:
