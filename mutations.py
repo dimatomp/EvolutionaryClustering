@@ -29,20 +29,30 @@ def one_nth_change_move(indiv: Individual) -> str:
         '' if not adding_cluster or max(labels[numbers_to_change]) != n_clusters - 1 else ', add new cluster')
 
 
-def trivial_strategy_mutation(strategies, silent=False):
-    strategy_names = strategies
-    strategies = list(map(eval, strategies))
+class DynamicStrategyMutation:
+    def __init__(self, strategies, silent=False):
+        self.strategy_names = strategies
+        self.strategies = list(map(eval, strategies))
+        self.silent = silent
+        self.probs = np.array([1 / len(strategies)] * len(strategies))
+        self.success_array = [1] * len(strategies)
+        print('Init dynamic strategy with moves:', self.strategy_names, file=sys.stderr)
 
-    def mutation(indiv: Individual):
+    def recalibrate(self):
+        self.probs = construct_probabilities(np.array(self.success_array), the_less_the_better=False)
+        print('New probabilities', self.probs, file=sys.stderr)
+        self.success_array = [1] * len(self.strategies)
+
+    def __call__(self, indiv: Individual):
         indiv_backup, indiv = indiv, indiv.copy()
         while True:
-            strategy_index = np.random.choice(len(strategy_names))
+            strategy_index = np.random.choice(len(self.strategy_names), p=self.probs)
             try:
-                detail = "{}: {}".format(strategy_names[strategy_index], strategies[strategy_index](indiv))
+                detail = "{}: {}".format(self.strategy_names[strategy_index], self.strategies[strategy_index](indiv))
                 cleanup_empty_clusters(indiv['labels'])
             except MutationNotApplicable:
-                if not silent:
-                    print('Mutation {} not applicable'.format(strategy_names[strategy_index]), file=sys.stderr)
+                if not self.silent:
+                    print('Mutation {} not applicable'.format(self.strategy_names[strategy_index]), file=sys.stderr)
                 indiv = indiv_backup.copy()
                 continue
             except:
@@ -50,14 +60,52 @@ def trivial_strategy_mutation(strategies, silent=False):
                 indiv = indiv_backup.copy()
                 continue
             if len(np.unique(indiv['labels'])) == 1:
-                if not silent:
+                if not self.silent:
+                    print('Tried to leave single cluster with whole dataset', file=sys.stderr)
+                indiv = indiv_backup.copy()
+                continue
+
+            def callback(success, time):
+                if success:
+                    self.success_array[strategy_index] += 1
+
+            indiv.set_callback(callback)
+            break
+        return indiv, detail
+
+
+class TrivialStrategyMutation:
+    def __init__(self, strategies, silent=False):
+        self.strategy_names = strategies
+        self.strategies = list(map(eval, strategies))
+        self.silent = silent
+
+    def recalibrate(self):
+        pass
+
+    def __call__(self, indiv: Individual):
+        indiv_backup, indiv = indiv, indiv.copy()
+        while True:
+            strategy_index = np.random.choice(len(self.strategy_names))
+            try:
+                detail = "{}: {}".format(self.strategy_names[strategy_index], self.strategies[strategy_index](indiv))
+                cleanup_empty_clusters(indiv['labels'])
+            except MutationNotApplicable:
+                if not self.silent:
+                    print('Mutation {} not applicable'.format(self.strategy_names[strategy_index]), file=sys.stderr)
+                indiv = indiv_backup.copy()
+                continue
+            except:
+                traceback.print_exc()
+                indiv = indiv_backup.copy()
+                continue
+            if len(np.unique(indiv['labels'])) == 1:
+                if not self.silent:
                     print('Tried to leave single cluster with whole dataset', file=sys.stderr)
                 indiv = indiv_backup.copy()
                 continue
             break
         return indiv, detail
-
-    return mutation
 
 
 def expand_cluster_move(indiv: Individual) -> str:
@@ -341,17 +389,17 @@ def knn_reclassification_move(indiv: Individual) -> str:
     return detail
 
 
-split_merge_move_mutation = trivial_strategy_mutation(
+split_merge_move_mutation = TrivialStrategyMutation(
     ['unguided_split_gene_move', 'guided_merge_gene_move(centroid_distance_cohesion)', 'expand_cluster_move'])
-split_eliminate_mutation = trivial_strategy_mutation(
+split_eliminate_mutation = TrivialStrategyMutation(
     ['split_farthest_move', 'unguided_eliminate_move', 'expand_cluster_move'])
 
 
 def evo_cluster_mutation(separation, cohesion):
-    return trivial_strategy_mutation(['unguided_merge_gene_move', 'guided_merge_gene_move({})'.format(cohesion),
-                                      'unguided_remove_and_reclassify_move', 'unguided_split_gene_move',
-                                      'guided_remove_and_reclassify_move({})'.format(separation),
-                                      'guided_split_gene_move({})'.format(separation)])
+    return TrivialStrategyMutation(['unguided_merge_gene_move', 'guided_merge_gene_move({})'.format(cohesion),
+                                    'unguided_remove_and_reclassify_move', 'unguided_split_gene_move',
+                                    'guided_remove_and_reclassify_move({})'.format(separation),
+                                    'guided_split_gene_move({})'.format(separation)])
 
 
 cohesion_move_names = ['guided_merge_gene_move']
@@ -365,7 +413,30 @@ def all_moves_mutation(separation=None, cohesion=None, silent=False):
                                                                         separation_move_names]
     cohesion_moves = all_cohesion_moves if cohesion is None else ['{}({})'.format(j, cohesion) for j in
                                                                   cohesion_move_names]
-    return trivial_strategy_mutation(
+    return TrivialStrategyMutation(
+        ['unguided_merge_gene_move', 'unguided_remove_and_reclassify_move', 'unguided_split_gene_move',
+         'expand_cluster_move', 'split_farthest_move', 'unguided_eliminate_move', 'knn_reclassification_move',
+         'one_nth_change_move', 'centroid_hill_climbing_move', 'prototype_hill_climbing_move'] + separation_moves +
+        cohesion_moves, silent=silent)
+
+
+def non_prototype_moves_dynamic_mutation(separation=None, cohesion=None, silent=False):
+    separation_moves = all_separation_moves if separation is None else ['{}({})'.format(j, separation) for j in
+                                                                        separation_move_names]
+    cohesion_moves = all_cohesion_moves if cohesion is None else ['{}({})'.format(j, cohesion) for j in
+                                                                  cohesion_move_names]
+    return DynamicStrategyMutation(
+        ['unguided_merge_gene_move', 'unguided_remove_and_reclassify_move', 'unguided_split_gene_move',
+         'expand_cluster_move', 'split_farthest_move', 'unguided_eliminate_move', 'knn_reclassification_move',
+         'one_nth_change_move'] + separation_moves + cohesion_moves, silent=silent)
+
+
+def all_moves_dynamic_mutation(separation=None, cohesion=None, silent=False):
+    separation_moves = all_separation_moves if separation is None else ['{}({})'.format(j, separation) for j in
+                                                                        separation_move_names]
+    cohesion_moves = all_cohesion_moves if cohesion is None else ['{}({})'.format(j, cohesion) for j in
+                                                                  cohesion_move_names]
+    return DynamicStrategyMutation(
         ['unguided_merge_gene_move', 'unguided_remove_and_reclassify_move', 'unguided_split_gene_move',
          'expand_cluster_move', 'split_farthest_move', 'unguided_eliminate_move', 'knn_reclassification_move',
          'one_nth_change_move', 'centroid_hill_climbing_move', 'prototype_hill_climbing_move'] + separation_moves +

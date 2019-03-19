@@ -7,6 +7,7 @@ class Individual:
         self.partition_fields = dict()
         self.prev_partition_fields = None
         self.is_immutable = False
+        self.callback = None
 
     def __getitem__(self, field):
         if field in self.data_fields:
@@ -17,6 +18,13 @@ class Individual:
 
     def __contains__(self, item):
         return item in self.data_fields or item in self.partition_fields or self.prev_partition_fields is not None and item in self.prev_partition_fields
+
+    def receive_feedback(self, success, time):
+        if self.callback is not None:
+            self.callback(success, time)
+
+    def set_callback(self, func):
+        self.callback = func
 
     def set_data_field(self, key, value):
         if self.is_immutable:
