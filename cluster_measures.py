@@ -68,7 +68,7 @@ def density_based_dists_and_internals(dists, labels, d=2):
         cluster_dist = np.where(cluster_dist != 0, cluster_dist ** (-d), 0)
         if (np.count_nonzero(labels_mask)) > 1:
             coredist[labels_mask] = (cluster_dist.sum(axis=1) / (cluster_dist.shape[1] - 1)) ** (-1 / d)
-        assert not np.isnan(coredist).any and (coredist != np.inf).all()
+        assert not np.isnan(coredist).any() and (coredist != np.inf).all()
     reach_dists = squareform(np.maximum(coredist[:, None], coredist[None, :]), checks=False)
     reach_dists = np.maximum(reach_dists, dists)
     cluster_internals = np.zeros(len(labels), dtype='bool')
