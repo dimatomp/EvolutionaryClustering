@@ -125,10 +125,10 @@ if __name__ == "__main__":
     ]
     # tasks = [('state-of-the-art.txt', 'run_state_of_the_art([datas, indices])')]
     tasks = []
-    for index_name, index in indices:
-        eval(index)
-        for data_name, data in datas:
-            for mutation_name, init, mutation in mutations:
+    for mutation_name, init, mutation in mutations:
+        for index_name, index in indices:
+            eval(index)
+            for data_name, data in datas:
                 fname = '{}-{}-{}.txt'.format(index_name, data_name, mutation_name)
                 tasks.append((fname,
                               "run_task(output_prefix + '/' + '{}', {}, {}, {}, {})".format(fname, index, data, init,
