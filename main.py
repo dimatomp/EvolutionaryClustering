@@ -120,7 +120,8 @@ if __name__ == "__main__":
         #  'evo_cluster_mutation(density_based_sparseness_separation, density_based_separation_cohesion)'),
         # ('split_eliminate', 'axis_initialization', 'split_eliminate_mutation'),
         # ('split_merge_move', 'axis_initialization', 'split_merge_move_mutation'),
-        ('all_mutations_trivial', 'axis_initialization', 'all_moves_mutation(silent=True)')
+        ('all_mutations_trivial', 'axis_initialization', 'all_moves_mutation(silent=True)'),
+        ('all_mutations_dynamic', 'axis_initialization', 'all_moves_dynamic_mutation(silent=True)')
     ]
     # tasks = [('state-of-the-art.txt', 'run_state_of_the_art([datas, indices])')]
     tasks = []
