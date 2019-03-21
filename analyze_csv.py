@@ -6,7 +6,9 @@ from io import StringIO
 def read_results(fname):
     with open(fname, 'r') as f:
         content = f.read().split('\n')
-    assert content[-4].startswith('Running')
+    while content[-1] == '':
+        content = content[:-1]
+    assert content[-3].startswith('Running') or content[-3].startswith('Resulting')
     logs = StringIO('\n'.join(content[:-4]))
     data = pd.read_csv(logs, index_col='generation')
     success = data['index'][1:] != data['index'].data[:-1]
