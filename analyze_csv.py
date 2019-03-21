@@ -9,7 +9,7 @@ def read_results(fname):
     while content[-1] == '':
         content = content[:-1]
     assert content[-3].startswith('Running') or content[-3].startswith('Resulting')
-    logs = StringIO('\n'.join(content[:-4]))
+    logs = StringIO('\n'.join(content[:-3]))
     data = pd.read_csv(logs, index_col='generation')
     success = data['index'][1:] != data['index'].data[:-1]
     success = data.iloc[1:][success]
