@@ -50,8 +50,10 @@ mutations = [
     #  'evo_cluster_mutation(density_based_sparseness_separation, density_based_separation_cohesion)'),
     # ('split_eliminate', 'axis_initialization', 'split_eliminate_mutation'),
     # ('split_merge_move', 'axis_initialization', 'split_merge_move_mutation'),
-    ('all_mutations_trivial', 'axis_initialization', 'all_moves_mutation(silent=True)'),
-    ('all_mutations_dynamic', 'axis_initialization', 'all_moves_dynamic_mutation(silent=True)')
+    # Trivial policies
+    # ('all_mutations_trivial', 'axis_initialization', 'all_moves_mutation(silent=True)'),
+    # ('all_mutations_dynamic', 'axis_initialization', 'all_moves_dynamic_mutation(silent=True)')
+    ('one_plus_lambda_all_moves', 'axis_initialization', 'list(map(SingleMoveMutation, get_all_moves()))')
 ]
 
 
@@ -66,6 +68,6 @@ for mutation_name, init, mutation in mutations:
         for data_name, data in datas:
             fname = get_file_name(index_name, data_name, mutation_name)
             tasks.append((fname,
-                          "run_one_plus_one_task(output_prefix + '/' + '{}', {}, {}, {}, {})".format(fname, index, data,
-                                                                                                     init,
-                                                                                                     mutation)))
+                          "run_one_plus_lambda_task(output_prefix + '/' + '{}', {}, {}, {}, {})".format(fname, index,
+                                                                                                        data, init,
+                                                                                                        mutation)))
