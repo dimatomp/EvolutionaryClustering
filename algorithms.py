@@ -1,4 +1,3 @@
-from log_handlers import default_logging
 from time import time
 from numpy import isnan
 from mutations import MutationNotApplicable
@@ -6,8 +5,8 @@ import traceback
 import sys
 
 
-def run_one_plus_one(initialization, mutation, index, data, external_measure, n_clusters=2, boundary=1e-9,
-                     num_tries=1000, logging=None):
+def run_one_plus_one(initialization, mutation, index, data, external_measure, logging, n_clusters=2, boundary=1e-9,
+                     num_tries=1000):
     c_solution = initialization(data, n_clusters)
     c_index = index(c_solution)
     ground_truth = external_measure(c_solution)
@@ -20,7 +19,6 @@ def run_one_plus_one(initialization, mutation, index, data, external_measure, n_
     def last_boundary():
         return last_breakthrough - boundary if index.is_minimized else last_breakthrough + boundary
 
-    logging = logging or default_logging()
     n_step = 0
     n_mutations = 0
     while True:
@@ -61,8 +59,7 @@ def run_one_plus_one(initialization, mutation, index, data, external_measure, n_
     return c_index, c_solution
 
 
-def run_one_plus_lambda(initialization, moves, index, data, external_measure, n_clusters=2, num_tries=250,
-                        logging=None):
+def run_one_plus_lambda(initialization, moves, index, data, external_measure, logging, n_clusters=2, num_tries=250):
     c_solution = initialization(data, n_clusters)
     c_index = index(c_solution)
     ground_truth = external_measure(c_solution)
@@ -71,7 +68,6 @@ def run_one_plus_lambda(initialization, moves, index, data, external_measure, n_
     def is_better(a, b):
         return a < b if index.is_minimized else a > b
 
-    logging = logging or default_logging()
     n_step = 0
     n_mutations = 0
     while True:

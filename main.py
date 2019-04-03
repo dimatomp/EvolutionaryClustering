@@ -50,18 +50,13 @@ def run_one_plus_one_task(fname, index, datas, initialization, mutation, logging
     print('Launching', fname, file=sys.stderr)
     with open(fname, 'w') as f:
         try:
-            logging = logging(f) if logging is not None else csv_logging(f, log_unsuccessful=True)
+            logging = logging(f) if logging is not None else CSVLogger(f, log_unsuccessful=True)
             if test_mode:
                 print('Loaded', fname, file=f)
                 return
-            start = time()
-            index, sol = run_one_plus_one(initialization, mutation, index, data,
-                                          lambda labels: adjusted_rand_score(clusters, labels['labels']),
-                                          n_clusters=len(np.unique(clusters)),
-                                          logging=logging)
-            print('Running time', time() - start, 'seconds', file=f)
-            print('Resulting index value', index, file=f)
-            print(list(sol["labels"]), file=f)
+            run_one_plus_one(initialization, mutation, index, data,
+                             lambda labels: adjusted_rand_score(clusters, labels['labels']), logging=logging,
+                             n_clusters=len(np.unique(clusters)))
         except:
             traceback.print_exc(file=f)
     print('Finished', fname, file=sys.stderr)
@@ -72,18 +67,13 @@ def run_one_plus_lambda_task(fname, index, datas, initialization, moves, logging
     print('Launching', fname, file=sys.stderr)
     with open(fname, 'w') as f:
         try:
-            logging = logging(f) if logging is not None else csv_logging(f, log_unsuccessful=True)
+            logging = logging(f) if logging is not None else CSVLogger(f, log_unsuccessful=True)
             if test_mode:
                 print('Loaded', fname, file=f)
                 return
-            start = time()
-            index, sol = run_one_plus_lambda(initialization, moves, index, data,
-                                             lambda labels: adjusted_rand_score(clusters, labels['labels']),
-                                             n_clusters=len(np.unique(clusters)),
-                                             logging=logging)
-            print('Running time', time() - start, 'seconds', file=f)
-            print('Resulting index value', index, file=f)
-            print(list(sol["labels"]), file=f)
+            run_one_plus_lambda(initialization, moves, index, data,
+                                lambda labels: adjusted_rand_score(clusters, labels['labels']), logging=logging,
+                                n_clusters=len(np.unique(clusters)))
         except:
             traceback.print_exc(file=f)
 
