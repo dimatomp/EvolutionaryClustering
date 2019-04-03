@@ -45,7 +45,7 @@ def run_state_of_the_art(args):
     print('Finished state-of-the-art.txt', file=sys.stderr)
 
 
-def run_task(fname, index, datas, initialization, mutation, logging=None):
+def run_one_plus_one_task(fname, index, datas, initialization, mutation, logging=None):
     data, clusters = datas
     print('Launching', fname, file=sys.stderr)
     with open(fname, 'w') as f:
@@ -55,8 +55,7 @@ def run_task(fname, index, datas, initialization, mutation, logging=None):
                 print('Loaded', fname, file=f)
                 return
             start = time()
-            index, sol = run_one_plus_one(initialization, mutation,
-                                          index, data,
+            index, sol = run_one_plus_one(initialization, mutation, index, data,
                                           lambda labels: adjusted_rand_score(clusters, labels['labels']),
                                           n_clusters=len(np.unique(clusters)),
                                           logging=logging)
@@ -66,6 +65,27 @@ def run_task(fname, index, datas, initialization, mutation, logging=None):
         except:
             traceback.print_exc(file=f)
     print('Finished', fname, file=sys.stderr)
+
+
+def run_one_plus_lambda_task(fname, index, datas, initialization, moves, logging=None):
+    data, clusters = datas
+    print('Launching', fname, file=sys.stderr)
+    with open(fname, 'w') as f:
+        try:
+            logging = logging(f) if logging is not None else csv_logging(f, log_unsuccessful=True)
+            if test_mode:
+                print('Loaded', fname, file=f)
+                return
+            start = time()
+            index, sol = run_one_plus_lambda(initialization, moves, index, data,
+                                             lambda labels: adjusted_rand_score(clusters, labels['labels']),
+                                             n_clusters=len(np.unique(clusters)),
+                                             logging=logging)
+            print('Running time', time() - start, 'seconds', file=f)
+            print('Resulting index value', index, file=f)
+            print(list(sol["labels"]), file=f)
+        except:
+            traceback.print_exc(file=f)
 
 
 if __name__ == "__main__":
@@ -80,14 +100,14 @@ if __name__ == "__main__":
         eval(tasks[int(sys.argv[1])][1])
     # pool = Pool(4)
     # pool.map_async(run_state_of_the_art, [(datas, indices)])
-    # pool.map_async(run_task, tasks)
+    # pool.map_async(run_one_plus_one_task, tasks)
     # pool.close()
     # pool.join()
     # for i, task in enumerate(tasks):
     #     if i >= 3:
     #         os.wait()
     #     if os.fork() == 0:
-    #         run_task(task)
+    #         run_one_plus_one_task(task)
     #         exit()
     # for i in range(4):
     #     os.wait()

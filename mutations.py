@@ -74,6 +74,21 @@ class DynamicStrategyMutation:
         return indiv, detail
 
 
+class SingleMoveMutation:
+    def __init__(self, move, silent=False):
+        self.move_name = move
+        self.move = eval(move)
+        self.silent = silent
+
+    def __call__(self, indiv: Individual):
+        indiv = indiv.copy()
+        detail = "{}: {}".format(self.move_name, self.move(indiv))
+        cleanup_empty_clusters(indiv['labels'])
+        if len(np.unique(indiv['labels'])) == 1:
+            raise MutationNotApplicable
+        return indiv, detail
+
+
 class TrivialStrategyMutation:
     def __init__(self, strategies, silent=False):
         self.strategy_names = strategies
@@ -408,16 +423,19 @@ separation_move_names = ['guided_remove_and_reclassify_move', 'guided_split_gene
 all_separation_moves = list(chain(*(['{}({})'.format(j, i) for i in all_separations] for j in separation_move_names)))
 
 
-def all_moves_mutation(separation=None, cohesion=None, silent=False):
+def get_all_moves(separation=None, cohesion=None):
     separation_moves = all_separation_moves if separation is None else ['{}({})'.format(j, separation) for j in
                                                                         separation_move_names]
     cohesion_moves = all_cohesion_moves if cohesion is None else ['{}({})'.format(j, cohesion) for j in
                                                                   cohesion_move_names]
-    return TrivialStrategyMutation(
-        ['unguided_merge_gene_move', 'unguided_remove_and_reclassify_move', 'unguided_split_gene_move',
-         'expand_cluster_move', 'split_farthest_move', 'unguided_eliminate_move', 'knn_reclassification_move',
-         'one_nth_change_move', 'centroid_hill_climbing_move', 'prototype_hill_climbing_move'] + separation_moves +
-        cohesion_moves, silent=silent)
+    return ['unguided_merge_gene_move', 'unguided_remove_and_reclassify_move', 'unguided_split_gene_move',
+            'expand_cluster_move', 'split_farthest_move', 'unguided_eliminate_move', 'knn_reclassification_move',
+            'one_nth_change_move', 'centroid_hill_climbing_move',
+            'prototype_hill_climbing_move'] + separation_moves + cohesion_moves
+
+
+def all_moves_mutation(separation=None, cohesion=None, silent=False):
+    return TrivialStrategyMutation(get_all_moves(separation, cohesion), silent=silent)
 
 
 def non_prototype_moves_dynamic_mutation(separation=None, cohesion=None, silent=False):
@@ -432,12 +450,4 @@ def non_prototype_moves_dynamic_mutation(separation=None, cohesion=None, silent=
 
 
 def all_moves_dynamic_mutation(separation=None, cohesion=None, silent=False):
-    separation_moves = all_separation_moves if separation is None else ['{}({})'.format(j, separation) for j in
-                                                                        separation_move_names]
-    cohesion_moves = all_cohesion_moves if cohesion is None else ['{}({})'.format(j, cohesion) for j in
-                                                                  cohesion_move_names]
-    return DynamicStrategyMutation(
-        ['unguided_merge_gene_move', 'unguided_remove_and_reclassify_move', 'unguided_split_gene_move',
-         'expand_cluster_move', 'split_farthest_move', 'unguided_eliminate_move', 'knn_reclassification_move',
-         'one_nth_change_move', 'centroid_hill_climbing_move', 'prototype_hill_climbing_move'] + separation_moves +
-        cohesion_moves, silent=silent)
+    return DynamicStrategyMutation(get_all_moves(separation, cohesion), silent=silent)

@@ -159,5 +159,5 @@ def construct_probabilities(values, the_less_the_better=True):
     if len(values) == 1:
         return np.ones(1)
     if the_less_the_better:
-        values = values.max() - values
+        values = values.max() + values.min() - values
     return values / values.sum()

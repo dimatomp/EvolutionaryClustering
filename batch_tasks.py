@@ -65,5 +65,7 @@ for mutation_name, init, mutation in mutations:
     for index_name, index in indices:
         for data_name, data in datas:
             fname = get_file_name(index_name, data_name, mutation_name)
-            tasks.append((fname, "run_task(output_prefix + '/' + '{}', {}, {}, {}, {})".format(fname, index, data, init,
-                                                                                               mutation)))
+            tasks.append((fname,
+                          "run_one_plus_one_task(output_prefix + '/' + '{}', {}, {}, {}, {})".format(fname, index, data,
+                                                                                                     init,
+                                                                                                     mutation)))
