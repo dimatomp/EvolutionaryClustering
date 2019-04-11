@@ -53,7 +53,8 @@ mutations = [
     # Trivial policies
     # ('all_mutations_trivial', 'axis_initialization', 'all_moves_mutation(silent=True)'),
     # ('all_mutations_dynamic', 'axis_initialization', 'all_moves_dynamic_mutation(silent=True)')
-    ('one_plus_lambda_all_moves', 'axis_initialization', 'list(map(SingleMoveMutation, get_all_moves()))')
+    ('one_plus_lambda=10_random_moves', 'axis_initialization',
+     'RandomMovesFromList(10, list(map(SingleMoveMutation, get_all_moves())))')
 ]
 
 

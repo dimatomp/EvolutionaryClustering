@@ -1,6 +1,7 @@
 from time import time
 from numpy import isnan
 from mutations import MutationNotApplicable
+from random import choice
 import traceback
 import sys
 
@@ -127,3 +128,19 @@ def run_one_plus_lambda(initialization, moves, index, data, external_measure, lo
         if not at_least_one:
             break
     return c_index, c_solution
+
+
+class RandomMovesFromList:
+    def __init__(self, lam, moves):
+        self.lam = lam
+        self.moves = moves
+
+    def __iter__(self):
+        self.cIdx = 0
+        return self
+
+    def __next__(self):
+        if self.cIdx >= self.lam:
+            raise StopIteration
+        self.cIdx += 1
+        return choice(self.moves)
