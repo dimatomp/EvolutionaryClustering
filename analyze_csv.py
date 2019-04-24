@@ -1,5 +1,7 @@
 import sys
 import pandas as pd
+import os
+import traceback
 from batch_tasks import *
 from io import StringIO
 from itertools import chain
@@ -7,19 +9,24 @@ from itertools import chain
 
 def read_results(fname):
     with open(fname, 'r') as f:
-        content = f.read().split('\n')
+        content = f.read()
+    if content.find('Traceback') != -1:
+        raise ValueError('File has traceback')
+    content = content.split('\n')
     while content[-1] == '':
         content = content[:-1]
-    assert content[-3].startswith('Running') or content[-3].startswith('Resulting')
-    running_time = None
-    for s in content[-3:]:
-        if s.startswith('Running time'):
-            running_time = float(s[13:s.find(' seconds')])
-    logs = StringIO('\n'.join(content[:-3]))
+    old_format = content[-3].startswith('Running') or content[-3].startswith('Resulting')
+    if old_format:
+        running_time = None
+        for s in content[-3:]:
+            if s.startswith('Running time'):
+                running_time = float(s[13:s.find(' seconds')])
+        content = content[:-3]
+    logs = StringIO('\n'.join(content))
     data = pd.read_csv(logs, index_col='generation')
-    success = data['index'][1:] != data['index'].data[:-1]
-    success = data.iloc[1:][success]
-    return data, success, running_time
+    if not old_format:
+        running_time = data.iloc[-1]['time']
+    return data, running_time
 
 
 def load_strategy_data(getter, prefix='.'):
@@ -45,18 +52,34 @@ def load_strategy_data(getter, prefix='.'):
 
 
 def load_strategy_indices(prefix='.'):
-    return load_strategy_data(lambda trivials: trivials[1].iloc[-1]['index'], prefix=prefix)
+    return load_strategy_data(lambda trivials: trivials[0].iloc[-1]['index'], prefix=prefix)
 
 
 def load_strategy_times(prefix='.'):
-    return load_strategy_data(lambda x: x[2], prefix=prefix)
+    return load_strategy_data(lambda x: x[1], prefix=prefix)
 
 
-if __name__ == '__main__':
-    success = read_results(sys.argv[1])[1]
-    pd.set_option('display.max_rows', len(success))
-    pd.set_option('display.max_columns', None)
-    pd.set_option('display.width', 2000)
-    pd.set_option('display.float_format', '{:20,.2f}'.format)
-    pd.set_option('display.max_colwidth', -1)
-    print(success)
+def load_all_files(folder):
+    datas = []
+    for s in os.listdir(folder):
+        print(s)
+        index, dataset, algo = s.split('-')
+        algo = algo[:-4]
+        try:
+            data, time = read_results(folder + '/' + s)
+        except:
+            traceback.print_exc()
+            continue
+        datas.append((index, dataset, algo, data, time))
+    return datas
+
+
+
+#if __name__ == '__main__':
+#    success = read_results(sys.argv[1])[0]
+#    pd.set_option('display.max_rows', len(success))
+#    pd.set_option('display.max_columns', None)
+#    pd.set_option('display.width', 2000)
+#    pd.set_option('display.float_format', '{:20,.2f}'.format)
+#    pd.set_option('display.max_colwidth', -1)
+#    print(success)
