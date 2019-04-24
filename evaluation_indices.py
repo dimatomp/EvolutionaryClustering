@@ -35,8 +35,7 @@ def dvcb_index(d=2):
     def index(indiv):
         labels = indiv["labels"]
         dists = cache_distances(indiv)
-        cluster_counts = np.bincount(labels)
-        cluster_validities = density_based_cluster_validity(dists, labels, d=d)
+        cluster_validities, cluster_counts = density_based_cluster_validity(dists, labels, d=d, return_intcount=True)
         return (cluster_counts * cluster_validities).sum() / len(labels)
 
     return index

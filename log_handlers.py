@@ -55,11 +55,13 @@ class CSVLogger:
 
 
 class Matplotlib2DLogger:
-    def __init__(self, nested=None, log_unsuccessful=False):
+    def __init__(self, nested=None, log_unsuccessful=False, fnames=None):
         self.log_unsuccessful = log_unsuccessful
         self.nested = nested
         self.fig = plt.figure()
         self.ax = self.fig.add_subplot(111)
+        self.fnames = fnames
+        self.findex = 0
         plt.ion()
         plt.show(block=False)
 
@@ -73,5 +75,9 @@ class Matplotlib2DLogger:
         for i in range(n_clusters):
             color = colors.hsv_to_rgb((i / n_clusters, 1, 1))[None, :]
             self.ax.scatter(*data[labels == i].T, c=color, s=3)
+        self.fig.suptitle('Generation {}, index value {}'.format(n_step, c_index))
         self.fig.canvas.draw()
+        if self.fnames is not None:
+            self.fig.savefig(self.fnames.format(self.findex))
+            self.findex += 1
         self.fig.canvas.flush_events()

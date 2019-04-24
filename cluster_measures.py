@@ -117,7 +117,7 @@ def density_based_sparseness_separation(labels, indiv, ord=2, **kwargs):
     return density_based_cluster_sparseness(cache_distances(indiv, ord=ord), labels)
 
 
-def density_based_cluster_validity(dists, labels, d=2):
+def density_based_cluster_validity(dists, labels, d=2, return_intcount=False):
     # ignore_points = cluster_counts[labels] > 1
     # if not ignore_points.all():
     #     ignore_clusters = np.cumsum(cluster_counts == 1)
@@ -136,7 +136,13 @@ def density_based_cluster_validity(dists, labels, d=2):
     matrices = matrices[:, squareform_matrix(len(internal_labels))]
     internal_dists = np.where(matrices, internal_dists, np.inf)
     cluster_separation = internal_dists.min(axis=1)
-    return (cluster_separation - cluster_sparseness) / np.maximum(cluster_separation, cluster_sparseness)
+    result = (cluster_separation - cluster_sparseness) / np.maximum(cluster_separation, cluster_sparseness)
+    if not return_intcount:
+        return result
+    intcount = np.bincount(internal_labels)
+    if len(intcount) < len(result):
+        intcount = np.hstack(intcount, np.zeros(len(result) - len(intcount)))
+    return result, intcount
 
 
 def density_based_validity_separation(labels, indiv, ord=2, **kwargs):
