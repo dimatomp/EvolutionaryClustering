@@ -1,14 +1,14 @@
 from algorithms import *
+from log_handlers import *
 from initialization import *
 from mutations import *
 from data_generation import *
 from evaluation_indices import *
+from batch_tasks import *
 from log_handlers import *
 from sklearn.metrics import adjusted_rand_score
 from sklearn.cluster import KMeans, AffinityPropagation, AgglomerativeClustering, MeanShift
 from time import time
-from multiprocessing import Pool
-from batch_tasks import tasks
 import traceback
 
 generated_prefix = '.'
@@ -45,8 +45,7 @@ def run_state_of_the_art(args):
     print('Finished state-of-the-art.txt', file=sys.stderr)
 
 
-def run_one_plus_one_task(fname, index, datas, initialization, mutation, logging=None):
-    data, clusters = datas
+def run_one_plus_one_task(fname, index, data, initialization, mutation, logging=None):
     print('Launching', fname, file=sys.stderr)
     with open(fname, 'w') as f:
         try:
@@ -54,16 +53,14 @@ def run_one_plus_one_task(fname, index, datas, initialization, mutation, logging
             if test_mode:
                 print('Loaded', fname, file=f)
                 return
-            run_one_plus_one(initialization, mutation, index, data,
-                             lambda labels: adjusted_rand_score(clusters, labels['labels']), logging=logging,
-                             n_clusters=len(np.unique(clusters)))
+            run_one_plus_one(initialization, mutation, index, data, logging=logging,
+                             n_clusters=int(np.cbrt(len(data))))
         except:
             traceback.print_exc(file=f)
     print('Finished', fname, file=sys.stderr)
 
 
-def run_one_plus_lambda_task(fname, index, datas, initialization, moves, logging=None):
-    data, clusters = datas
+def run_one_plus_lambda_task(fname, index, data, initialization, moves, logging=None):
     print('Launching', fname, file=sys.stderr)
     with open(fname, 'w') as f:
         try:
@@ -71,33 +68,21 @@ def run_one_plus_lambda_task(fname, index, datas, initialization, moves, logging
             if test_mode:
                 print('Loaded', fname, file=f)
                 return
-            run_one_plus_lambda(initialization, moves, index, data,
-                                lambda labels: adjusted_rand_score(clusters, labels['labels']), logging=logging,
-                                n_clusters=len(np.unique(clusters)))
+            run_one_plus_lambda(initialization, moves, index, data, logging=logging,
+                                n_clusters=int(np.cbrt(len(data))))
         except:
             traceback.print_exc(file=f)
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 1:
-        print('Total', len(tasks), 'tasks to run')
-    elif len(sys.argv) == 2:
-        print(tasks[int(sys.argv[1])][0])
-    else:
+    real_prefix = sys.argv[1]
+    tasks = init_batch(real_prefix)
+    if len(sys.argv) == 5:
         generated_prefix = sys.argv[2]
-        real_prefix = sys.argv[3]
-        output_prefix = sys.argv[4]
-        eval(tasks[int(sys.argv[1])][1])
-    # pool = Pool(4)
-    # pool.map_async(run_state_of_the_art, [(datas, indices)])
-    # pool.map_async(run_one_plus_one_task, tasks)
-    # pool.close()
-    # pool.join()
-    # for i, task in enumerate(tasks):
-    #     if i >= 3:
-    #         os.wait()
-    #     if os.fork() == 0:
-    #         run_one_plus_one_task(task)
-    #         exit()
-    # for i in range(4):
-    #     os.wait()
+        output_prefix = sys.argv[3]
+    if len(sys.argv) == 2:
+        print('Total', len(tasks), 'tasks to run')
+    elif len(sys.argv) == 3:
+        print(tasks[int(sys.argv[2])][0])
+    else:
+        eval(tasks[int(sys.argv[4])][1])

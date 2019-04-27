@@ -38,17 +38,17 @@ class CSVLogger:
         self.log_unsuccessful = log_unsuccessful
         self.start_time = None
         self.prev_labels = None
-        print('generation,index,ext_index,n_successful_mutations,n_clusters,delta_time,time,detail,individual',
+        print('generation,index,n_successful_mutations,n_clusters,delta_time,time,detail,individual',
               file=output or sys.stdout)
 
-    def __call__(self, n_step, c_index, c_solution, n_mutations, ground_truth, minor, success, delta_time, detail):
+    def __call__(self, n_step, c_index, c_solution, n_mutations, minor, success, delta_time, detail):
         c_time = time()
         self.start_time = self.start_time or c_time
         if not self.log_unsuccessful and not success: return
         solution_diff = c_solution['labels'] - self.prev_labels if self.prev_labels is not None else c_solution[
             'labels']
         self.prev_labels = c_solution['labels']
-        print(n_step, c_index, ground_truth, n_mutations, len(np.unique(c_solution["labels"])), delta_time,
+        print(n_step, c_index, n_mutations, len(np.unique(c_solution["labels"])), delta_time,
               c_time - self.start_time, str(detail).replace(',', ';'), encode_solution(solution_diff), sep=',',
               file=self.output)
         self.output.flush()
@@ -65,10 +65,10 @@ class Matplotlib2DLogger:
         plt.ion()
         plt.show(block=False)
 
-    def __call__(self, n_step, c_index, c_solution, n_mutations, ground_truth, minor, success, time, detail):
+    def __call__(self, n_step, c_index, c_solution, n_mutations, minor, success, time, detail):
         if not self.log_unsuccessful and not success: return
         if self.nested is not None:
-            self.nested(n_step, c_index, c_solution, n_mutations, ground_truth, minor, success, time, detail)
+            self.nested(n_step, c_index, c_solution, n_mutations, minor, success, time, detail)
         labels, data = c_solution["labels"], c_solution["data"]
         self.ax.clear()
         n_clusters = len(np.unique(labels))

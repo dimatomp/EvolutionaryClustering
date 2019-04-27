@@ -1,5 +1,7 @@
 from cluster_measures import *
 from individual import Individual
+from scipy.sparse import find, coo_matrix
+from scipy.sparse.csgraph import minimum_spanning_tree, connected_components
 
 
 def initializer(initfunc):
@@ -17,6 +19,21 @@ def initializer(initfunc):
 @initializer
 def random_initialization(data, n_clusters):
     return {"labels": np.random.randint(low=0, high=n_clusters, size=len(data)), "data": data}
+
+
+def tree_initialization(data, n_clusters):
+    indiv = Individual({"data": data})
+    rows, cols, vals = find(minimum_spanning_tree(squareform(cache_distances(indiv))))
+    indiv.set_data_field("mst", (rows, cols, vals))
+    perm = np.argsort(vals)
+    edges = perm[:-n_clusters+1]
+    mst = coo_matrix((vals[edges], (rows[edges], cols[edges])), shape=(len(data), len(data)))
+    labels = connected_components(mst)[1]
+    split_edges = np.zeros(len(rows), dtype='bool')
+    split_edges[perm[-n_clusters+1:]] = True
+    indiv.set_partition_field('labels', labels)
+    indiv.set_partition_field('split_edges', split_edges)
+    return indiv
 
 
 @initializer

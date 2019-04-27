@@ -5,7 +5,7 @@ class Individual:
     def __init__(self, data_fields):
         self.data_fields = data_fields
         self.partition_fields = dict()
-        self.prev_partition_fields = None
+        self.prev_partition_fields = dict()
         self.is_immutable = False
         self.callback = None
 
@@ -36,8 +36,13 @@ class Individual:
             raise AttributeError("Trying to modify immutable individual")
         if key in self.partition_fields:
             raise AttributeError('Key "{}" already present in the inidividual'.format(key))
-        self.prev_partition_fields = None
+        #self.prev_partition_fields = None
         self.partition_fields[key] = value
+
+    def set_prev_partition_field(self, key, value):
+        if key in self.prev_partition_fields:
+            raise AttributeError('Key "{}" already present in the previous inidividual'.format(key))
+        self.prev_partition_fields[key] = value
 
     def copy(self):
         self.is_immutable = True

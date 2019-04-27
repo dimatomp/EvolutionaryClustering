@@ -8,12 +8,10 @@ def generate_random_normal(max_points, dim=None, n_clusters=None):
     n_clusters = n_clusters or np.random.randint(2, 50)
     centers = np.random.uniform(low=0, high=50, size=(n_clusters, dim))
     result = []
-    clusters = []
     for i, center in enumerate(centers):
         n_points = np.random.randint(10, max(11, max_points // n_clusters))
         result.append(np.random.multivariate_normal(center, np.identity(dim), size=n_points))
-        clusters.append(np.full(n_points, i))
-    return np.vstack(result), np.hstack(clusters)
+    return np.vstack(result)
 
 
 def generated_file_name(max_points, dim=None, n_clusters=None):
@@ -23,69 +21,39 @@ def generated_file_name(max_points, dim=None, n_clusters=None):
 def load_generated_random_normal(max_points, dim=None, n_clusters=None, prefix='.'):
     fname = prefix + '/' + generated_file_name(max_points, dim, n_clusters)
     datas = np.loadtxt(fname, delimiter=',')
-    return datas[:, :-1], datas[:, -1]
+    return datas[:, :-1]#, datas[:, -1]
 
 
 def normalize_data(dataset):
-    unique, indices = np.unique(dataset[0], return_index=True, axis=0)
-    return normalize(unique, axis=0), dataset[1][indices]
+    unique = np.unique(dataset, axis=0)
+    return normalize(unique, axis=0)
 
 
 def load_immunotherapy(prefix='.'):
     dataset = pd.read_excel(prefix + '/Immunotherapy.xlsx')
-    clusters = dataset['Result_of_Treatment']
-    del dataset['Result_of_Treatment']
-    return dataset.values, clusters.values
+    return dataset.values
 
 
 def load_user_knowledge(prefix='.'):
     dataset = pd.read_excel(prefix + '/Data_User_Modeling_Dataset_Hamdi Tolga KAHRAMAN.xls', sheet_name=1)
-    data = dataset.values[:, :-4].astype('float')
-    clusters = list(set(dataset.values[:, -4]))
-    labels = np.array([clusters.index(i) for i in dataset.values[:, -4]])
-    return data, labels
+    data = dataset.values[:, :-3].astype('float')
+    return data
 
 
-def load_regular_csv(filename, ignore=1, prefix='.', heading=True):
-    dataset = pd.read_csv(prefix + '/' + filename)
-    data = dataset.values[:, :-ignore].astype('float')
-    clusters = list(set(dataset.values[:, -ignore]))
-    labels = np.array([clusters.index(i) for i in dataset.values[:, -ignore]])
-    return data, labels
+def load_from_file(fname, prefix='.'):
+    dataset = pd.read_csv(prefix + '/' + fname)
+    cols = []
+    for col, dtype in zip(dataset.columns, dataset.dtypes):
+        elems = np.unique(dataset[col])
+        if len(elems) == 1:
+            continue
+        if dtype.kind in "fiu":
+            cols.append(dataset[col])
+        else:
+            indices = np.argwhere(dataset[col][:, None] == elems[None, :])[:, 1]
+            cols.append(indices.flatten())
+    return np.array(cols).T
 
 
-def load_iris(prefix='.'):
-    return load_regular_csv('iris.data', prefix=prefix)
-
-
-def load_mfeat_morphological(prefix='.'):
-    return load_regular_csv('dataset_18_mfeat-morphological.csv', prefix=prefix)
-
-
-def load_glass(prefix='.'):
-    return load_regular_csv('dataset_41_glass.csv', prefix=prefix)
-
-
-def load_haberman(prefix='.'):
-    return load_regular_csv('dataset_43_haberman.csv', prefix=prefix)
-
-
-def load_heart_statlog(prefix='.'):
-    return load_regular_csv('dataset_53_heart-statlog.csv', prefix=prefix)
-
-
-def load_vehicle(prefix='.'):
-    return load_regular_csv('dataset_54_vehicle.csv', prefix=prefix)
-
-
-def load_liver_disorders(prefix='.'):
-    return load_regular_csv('dataset_8_liver-disorders.csv', ignore=2, prefix=prefix)
-
-
-def load_oil_spill(prefix='.'):
-    dataset = pd.read_csv(prefix + '/phpgEDZOc.csv')
-    labels = dataset['class']
-    clusters = list(set(labels))
-    del dataset['class']
-    labels = np.array([clusters.index(i) for i in labels])
-    return dataset.values, labels
+def load_sales_transactions(prefix='.'):
+    return load_from_file('Sales_Transactions_Dataset_Weekly.csv', prefix=prefix)[:, 53:]

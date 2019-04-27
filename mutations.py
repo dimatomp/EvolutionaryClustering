@@ -2,11 +2,15 @@ from sklearn.neighbors import BallTree
 from cluster_measures import *
 from itertools import chain
 from individual import Individual
+from scipy.sparse import coo_matrix, find
+from scipy.sparse.csgraph import connected_components
 import sys
 import traceback
 
 
-class MutationNotApplicable(Exception): pass
+class MutationNotApplicable(Exception):
+    def __init__(self, replacement=None):
+        self.replacement = replacement
 
 
 def copy_labels(indiv: Individual) -> tuple:
@@ -105,11 +109,17 @@ class TrivialStrategyMutation:
             try:
                 detail = "{}: {}".format(self.strategy_names[strategy_index], self.strategies[strategy_index](indiv))
                 cleanup_empty_clusters(indiv['labels'])
-            except MutationNotApplicable:
-                if not self.silent:
-                    print('Mutation {} not applicable'.format(self.strategy_names[strategy_index]), file=sys.stderr)
+            except MutationNotApplicable as e:
                 indiv = indiv_backup.copy()
-                continue
+                if e.replacement is not None:
+                    strategy_index = self.strategy_names.index(e.replacement)
+                    detail = "{}: {}".format(self.strategy_names[strategy_index],
+                                             self.strategies[strategy_index](indiv))
+                    cleanup_empty_clusters(indiv['labels'])
+                else:
+                    if not self.silent:
+                        print('Mutation {} not applicable'.format(self.strategy_names[strategy_index]), file=sys.stderr)
+                    continue
             except:
                 traceback.print_exc()
                 indiv = indiv_backup.copy()
@@ -278,8 +288,11 @@ def unguided_remove_and_reclassify_move(indiv: Individual) -> str:
     return 'Remove and reclassify {} entries'.format(len(indices))
 
 
-def choose_clusters_guided(labels, data, indiv, clusters, separation, cluster_sizes, can_choose_all):
-    measures = separation(labels=labels, data=data, indiv=indiv, cluster_labels=clusters, ord=1)
+def choose_clusters_guided(labels, data, indiv, clusters, separation_name, cluster_sizes, can_choose_all):
+    if separation_name not in indiv:
+        measures = eval(separation_name)(labels=labels, data=data, indiv=indiv, cluster_labels=clusters, ord=1)
+        indiv.set_prev_partition_field(separation_name, measures)
+    measures = indiv[separation_name]
     measures = construct_probabilities(measures, the_less_the_better=False)
     n_clusters = np.count_nonzero(measures)
     if not can_choose_all:
@@ -289,23 +302,60 @@ def choose_clusters_guided(labels, data, indiv, clusters, separation, cluster_si
     return np.random.choice(clusters, n_chosen_clusters, replace=False, p=measures)
 
 
-def guided_split_gene_move(separation):
+def guided_histogram_split_gene_move(separation):
     def mutation(indiv: Individual) -> str:
         labels, data = copy_labels(indiv)
         clusters = np.unique(labels)
         cluster_sizes = np.count_nonzero(labels[:, None] == clusters[None, :], axis=0)
-        chosen_clusters = choose_clusters_guided(labels, data, indiv, clusters, separation, cluster_sizes, True)
-        for i, ex_cluster in enumerate(chosen_clusters):
-            centroid = data[labels == ex_cluster].mean(axis=0)
-            norm = np.random.multivariate_normal(np.zeros(len(centroid)), np.identity(len(centroid)))
-            dots = data[labels == ex_cluster].dot(norm)
-            hist, bins = np.histogram(dots, int(np.ceil(np.sqrt(len(dots)))))
-            probs = construct_probabilities(hist)
-            index = np.random.choice(len(bins) - 1, p=probs)
-            ratio = np.random.uniform(bins[index], bins[index + 1])
-            negativeDot = dots < ratio
-            labels[labels == ex_cluster] = np.where(negativeDot, len(cluster_sizes) + i, ex_cluster)
-        return 'Split {} clusters'.format(len(chosen_clusters))
+        while True:
+            chosen_clusters = choose_clusters_guided(labels, data, indiv, clusters, separation, cluster_sizes, True)
+            n_chosen_clusters = len(chosen_clusters)
+            for i, ex_cluster in enumerate(chosen_clusters):
+                cluster_flag = labels == ex_cluster
+                if np.count_nonzero(cluster_flag) == 1:
+                    n_chosen_clusters -= 1
+                    continue
+                centroid = data[cluster_flag].mean(axis=0)
+                norm = np.random.multivariate_normal(np.zeros(len(centroid)), np.identity(len(centroid)))
+                dots = data[labels == ex_cluster].dot(norm)
+                dotsort = dots
+                dotsort.sort()
+                p = construct_probabilities(dotsort[1:] - dotsort[:-1], the_less_the_better=False)
+                split_dot = dotsort[np.random.choice(len(p), p=p) + 1]
+                negativeDot = dots < split_dot
+                labels[labels == ex_cluster] = np.where(negativeDot, len(cluster_sizes) + i, ex_cluster)
+            if n_chosen_clusters == 0:
+                continue
+            return 'Split {} clusters'.format(len(chosen_clusters))
+
+    return mutation
+
+
+def guided_mst_split_gene_move(separation):
+    def mutation(indiv: Individual) -> str:
+        labels, data = copy_labels(indiv)
+        clusters = np.unique(labels)
+        cluster_sizes = np.count_nonzero(labels[:, None] == clusters[None, :], axis=0)
+        while True:
+            chosen_clusters = choose_clusters_guided(labels, data, indiv, clusters, separation, cluster_sizes, True)
+            n_chosen_clusters = len(chosen_clusters)
+            for i, ex_cluster in enumerate(chosen_clusters):
+                cluster_flag = labels == ex_cluster
+                if np.count_nonzero(cluster_flag) == 1:
+                    n_chosen_clusters -= 1
+                    continue
+                dists = cache_distances(indiv)[squareform(cluster_flag[:, None] & cluster_flag[None, :], checks=False)]
+                mst = minimum_spanning_tree(squareform(dists))
+                rows, cols, vals = find(mst)
+                p = construct_probabilities(vals, the_less_the_better=False)
+                r_idx = np.random.choice(np.arange(len(rows)), p=p)
+                mst[rows[r_idx], cols[r_idx]] = 0
+                mst.eliminate_zeros()
+                s_labels = connected_components(mst)[1]
+                labels[labels == ex_cluster] = np.where(s_labels == 1, len(cluster_sizes) + i, ex_cluster)
+            if n_chosen_clusters == 0:
+                continue
+            return 'Split {} clusters'.format(n_chosen_clusters)
 
     return mutation
 
@@ -335,14 +385,17 @@ def guided_remove_and_reclassify_move(separation):
     return mutation
 
 
+def centroid_k_means_move(indiv: Individual):
+    data = indiv['data']
+    centroids = get_clusters_and_centroids(indiv['labels'], data)[1]
+    labels, centroids = get_labels_by_centroids(centroids, data)
+    indiv.set_partition_field('centroids', centroids)
+    indiv.set_partition_field('labels', labels)
+
+
 def centroid_hill_climbing_move(indiv: Individual) -> str:
     if 'centroids' not in indiv:
-        data = indiv['data']
-        centroids = get_clusters_and_centroids(indiv['labels'], data)[1]
-        labels, centroids = get_labels_by_centroids(centroids, data)
-        indiv.set_partition_field('centroids', centroids)
-        indiv.set_partition_field('labels', labels)
-        return 'Initialize centroids'
+        raise MutationNotApplicable('centroid_k_means_move')
     centroids, data = indiv['centroids'], indiv['data']
     centroids = centroids.copy()
     shape = centroids.shape
@@ -357,21 +410,29 @@ def centroid_hill_climbing_move(indiv: Individual) -> str:
     return 'Alter centroid by delta {}'.format(delta)
 
 
+def prototype_k_means_move(indiv: Individual):
+    data = indiv['data']
+    clusters, centroids = get_clusters_and_centroids(indiv['labels'], data)
+    prototype_indices = cdist(data, centroids).argmin(axis=0)
+    prototypes = np.isin(np.arange(len(data)), prototype_indices)
+    indiv.set_partition_field('prototypes', prototypes)
+    indiv.set_partition_field('labels', get_labels_by_prototypes(prototypes, data))
+
+
 def prototype_hill_climbing_move(indiv: Individual) -> str:
     if 'prototypes' not in indiv:
-        data = indiv['data']
-        clusters, centroids = get_clusters_and_centroids(indiv['labels'], data)
-        prototype_indices = cdist(data, centroids).argmin(axis=0)
-        prototypes = np.isin(np.arange(len(data)), prototype_indices)
-        indiv.set_partition_field('prototypes', prototypes)
-        indiv.set_partition_field('labels', get_labels_by_prototypes(prototypes, data))
-        return 'Initialize prototypes'
+        raise MutationNotApplicable('prototype_k_means_move')
     prototypes, data = indiv['prototypes'], indiv['data']
     prototypes = prototypes.copy()
     n_prototypes = np.count_nonzero(prototypes)
     n_remove = np.random.binomial(n_prototypes, 1 / n_prototypes)
     n_add = np.random.binomial(len(prototypes) - n_prototypes, 1 / (len(prototypes) - n_prototypes))
     n_remove = min(n_remove, n_prototypes + n_add - 2)
+    if n_remove == 0 and n_add == 0:
+        if n_prototypes == 2 or np.random.randint(2) == 0:
+            n_add = 1
+        else:
+            n_remove = 1
     if n_add > 0:
         prototypes[np.random.choice(np.argwhere(~prototypes).flatten(), n_add, replace=False)] = True
     if n_remove > 0:
@@ -404,6 +465,52 @@ def knn_reclassification_move(indiv: Individual) -> str:
     return detail
 
 
+def tree_hill_climbing_move(indiv: Individual) -> str:
+    if 'mst' not in indiv:
+        dists = squareform(cache_distances(indiv))
+        rows, cols, vals = find(minimum_spanning_tree(dists))
+        indiv.set_data_field('mst', (rows, cols, vals))
+    rows, cols, vals = indiv['mst']
+    labels = indiv['labels']
+    if 'split_edges' not in indiv:
+        neq_indices = np.argwhere(labels[rows] != labels[cols]).flatten()
+        if len(np.unique(labels)) < len(neq_indices):
+            p = construct_probabilities(vals[neq_indices], the_less_the_better=False)
+            n_edges = np.random.binomial(len(neq_indices) - 1,
+                                         (len(np.unique(labels)) - 1) / (len(neq_indices) - 1)) + 1
+            neq_indices = np.random.choice(neq_indices, n_edges, p=p, replace=False)
+        else:
+            n_edges = len(neq_indices)
+        split_edges = np.zeros(len(rows), dtype='bool')
+        split_edges[neq_indices] = True
+        detail = 'Initialize tree with {} splitting edges'.format(n_edges)
+    else:
+        split_edges = indiv['split_edges']
+        split_edges = split_edges.copy()
+        n_split_edges = np.count_nonzero(split_edges)
+        n_remove = np.random.binomial(n_split_edges, 1 / n_split_edges)
+        n_add = np.random.binomial(len(split_edges) - n_split_edges, 1 / (len(split_edges) - n_split_edges))
+        n_remove = min(n_remove, n_split_edges + n_add - 1)
+        if n_remove == 0 and n_add == 0:
+            if n_split_edges == 1 or np.random.randint(2) == 0:
+                n_add = 1
+            else:
+                n_remove = 1
+        if n_add > 0:
+            p = construct_probabilities(vals[~split_edges], the_less_the_better=False)
+            split_edges[np.random.choice(np.argwhere(~split_edges).flatten(), n_add, p=p, replace=False)] = True
+        if n_remove > 0:
+            p = construct_probabilities(vals[split_edges])
+            split_edges[np.random.choice(np.argwhere(split_edges).flatten(), n_remove, p=p, replace=False)] = False
+        detail = "Add {} and remove {} edges".format(n_add, n_remove)
+    n_edges = len(rows) - np.count_nonzero(split_edges)
+    mst = coo_matrix((np.ones(n_edges), (rows[~split_edges], cols[~split_edges])), shape=(len(labels), len(labels)))
+    labels = connected_components(mst, directed=False)[1]
+    indiv.set_partition_field('split_edges', split_edges)
+    indiv.set_partition_field('labels', labels)
+    return detail
+
+
 split_merge_move_mutation = TrivialStrategyMutation(
     ['unguided_split_gene_move', 'guided_merge_gene_move(centroid_distance_cohesion)', 'expand_cluster_move'])
 split_eliminate_mutation = TrivialStrategyMutation(
@@ -413,25 +520,26 @@ split_eliminate_mutation = TrivialStrategyMutation(
 def evo_cluster_mutation(separation, cohesion):
     return TrivialStrategyMutation(['unguided_merge_gene_move', 'guided_merge_gene_move({})'.format(cohesion),
                                     'unguided_remove_and_reclassify_move', 'unguided_split_gene_move',
-                                    'guided_remove_and_reclassify_move({})'.format(separation),
-                                    'guided_split_gene_move({})'.format(separation)])
+                                    'guided_remove_and_reclassify_move("{}")'.format(separation),
+                                    'guided_histogram_split_gene_move("{}")'.format(separation)])
 
 
 cohesion_move_names = ['guided_merge_gene_move']
 all_cohesion_moves = list(chain(*(['{}({})'.format(j, i) for i in all_cohesions] for j in cohesion_move_names)))
-separation_move_names = ['guided_remove_and_reclassify_move', 'guided_split_gene_move', 'guided_eliminate_move']
-all_separation_moves = list(chain(*(['{}({})'.format(j, i) for i in all_separations] for j in separation_move_names)))
+separation_move_names = ['guided_remove_and_reclassify_move', 'guided_histogram_split_gene_move',
+                         'guided_mst_split_gene_move', 'guided_eliminate_move']
+all_separation_moves = list(chain(*(['{}("{}")'.format(j, i) for i in all_separations] for j in separation_move_names)))
 
 
 def get_all_moves(separation=None, cohesion=None):
-    separation_moves = all_separation_moves if separation is None else ['{}({})'.format(j, separation) for j in
+    separation_moves = all_separation_moves if separation is None else ['{}("{}")'.format(j, separation) for j in
                                                                         separation_move_names]
     cohesion_moves = all_cohesion_moves if cohesion is None else ['{}({})'.format(j, cohesion) for j in
                                                                   cohesion_move_names]
     return ['unguided_merge_gene_move', 'unguided_remove_and_reclassify_move', 'unguided_split_gene_move',
             'expand_cluster_move', 'split_farthest_move', 'unguided_eliminate_move', 'knn_reclassification_move',
-            'one_nth_change_move', 'centroid_hill_climbing_move',
-            'prototype_hill_climbing_move'] + separation_moves + cohesion_moves
+            'one_nth_change_move', 'centroid_k_means_move', 'centroid_hill_climbing_move', 'prototype_k_means_move',
+            'prototype_hill_climbing_move', 'tree_hill_climbing_move'] + separation_moves + cohesion_moves
 
 
 def all_moves_mutation(separation=None, cohesion=None, silent=False):
@@ -439,7 +547,7 @@ def all_moves_mutation(separation=None, cohesion=None, silent=False):
 
 
 def non_prototype_moves_dynamic_mutation(separation=None, cohesion=None, silent=False):
-    separation_moves = all_separation_moves if separation is None else ['{}({})'.format(j, separation) for j in
+    separation_moves = all_separation_moves if separation is None else ['{}("{}")'.format(j, separation) for j in
                                                                         separation_move_names]
     cohesion_moves = all_cohesion_moves if cohesion is None else ['{}({})'.format(j, cohesion) for j in
                                                                   cohesion_move_names]

@@ -1,7 +1,9 @@
 import numpy as np
+import sys
 from numpy.linalg import norm
 from scipy.spatial.distance import pdist, cdist, squareform
-from scipy.sparse.csgraph import minimum_spanning_tree
+from scipy.sparse import find, csr_matrix
+from scipy.sparse.csgraph import minimum_spanning_tree, dijkstra
 from individual import Individual
 
 
@@ -55,7 +57,7 @@ def squareform_matrix(n):
     return squareform_m[None, :] > squareform_m[:, None]
 
 
-def density_based_dists_and_internals(dists, labels, d=2):
+def density_based_dists_and_internals(dists, labels, d):
     n_clusters = len(np.unique(labels))
     coredist = np.zeros(len(labels))
     cluster_masks = []
@@ -71,53 +73,70 @@ def density_based_dists_and_internals(dists, labels, d=2):
         assert not np.isnan(coredist).any() and (coredist != np.inf).all()
     reach_dists = squareform(np.maximum(coredist[:, None], coredist[None, :]), checks=False)
     reach_dists = np.maximum(reach_dists, dists)
-    cluster_internals = np.zeros(len(labels), dtype='bool')
-    internal_nodes_list = []
-    msts = []
-    for l, m in enumerate(cluster_masks):
-        n_edges = np.count_nonzero(m)
-        mst = minimum_spanning_tree(squareform(reach_dists[m])).toarray()
-        mst = np.maximum(mst, mst.T)
-        internal_nodes = np.count_nonzero(mst, axis=1) != 1 if n_edges != 1 else np.ones(mst.shape[0], dtype='bool')
-        cluster_internals[labels == l] = internal_nodes
-        internal_nodes_list.append(squareform(internal_nodes[None, :] | internal_nodes[:, None], checks=False))
-        msts.append(squareform(mst))
-    return reach_dists, cluster_internals, internal_nodes_list, msts
+    mst = minimum_spanning_tree(squareform(reach_dists))
+    rows, cols = mst.nonzero()
+    rows, cols, vals = find(mst)
+    mst = csr_matrix((np.hstack([vals, vals]), (np.hstack([rows, cols]), np.hstack([cols, rows]))), shape=(len(labels), len(labels)))
+    rows, cols = np.bincount(rows), np.bincount(cols)
+    if len(rows) != len(labels):
+       rows = np.hstack([rows, np.zeros(len(labels) - len(rows), dtype='int')])
+    if len(cols) != len(labels):
+       cols = np.hstack([cols, np.zeros(len(labels) - len(cols), dtype='int')])
+    cluster_internals = rows + cols != 1
+    return cluster_internals, mst, n_clusters
+    # return mst, n_clusters
 
 
-def density_based_internal_dists(dists, labels, reach_dists=None, cluster_internals=None, d=2):
-    if reach_dists is None or cluster_internals is None:
-        reach_dists, cluster_internals = density_based_dists_and_internals(dists, labels, d=d)[:2]
-    internal_dists = reach_dists[squareform(cluster_internals[:, None] & cluster_internals[None, :], checks=False)]
+def density_based_internal_dists(labels, cluster_internals, n_clusters, mst):
     internal_labels = labels[cluster_internals]
-    n_clusters = len(np.unique(labels))
+# def density_based_internal_dists(labels, n_clusters, mst):
+#     internal_labels = labels
     internal_matrices = internal_labels[None, :] == np.arange(0, n_clusters)[:, None]
-    return internal_labels, internal_dists, internal_matrices
+    paths = dijkstra(mst, directed=False)
+    paths = paths[cluster_internals][:, cluster_internals]
+    return internal_labels, internal_matrices, squareform(paths, checks=False)
 
 
 def density_based_separation_cohesion(labels, indiv, ord=2, **kwargs):
-    internal_labels, internal_dists, internal_matrices = density_based_internal_dists(cache_distances(indiv, ord=ord),
-                                                                                      labels)
-    matrices = internal_matrices[:, None, :, None] & internal_matrices[None, :, None, :]
-    matrices = matrices[squareform_matrix(matrices.shape[0]), :, :]
-    np.logical_or(matrices, np.swapaxes(matrices, 1, 2), out=matrices)
-    matrices = matrices[:, squareform_matrix(matrices.shape[2])]
-    internal_dists = np.where(matrices, internal_dists, np.inf)
-    return internal_dists.min(axis=1)
+    cluster_internals, mst, n_clusters = density_based_dists_and_internals(cache_distances(indiv, ord=ord), labels,
+                                                                           indiv['data'].shape[1])
+    # mst, n_clusters = density_based_dists_and_internals(cache_distances(indiv, ord=ord), labels, indiv['data'].shape[1])
+    internal_labels, internal_matrices, paths = density_based_internal_dists(labels, cluster_internals, n_clusters, mst)
+    # internal_labels, internal_matrices, paths = density_based_internal_dists(labels, n_clusters, mst)
+    try:
+        matrices = internal_matrices[:, None, :, None] & internal_matrices[None, :, None, :]
+        matrices = matrices[squareform_matrix(matrices.shape[0]), :, :]
+        np.logical_or(matrices, np.swapaxes(matrices, 1, 2), out=matrices)
+        matrices = matrices[:, squareform_matrix(matrices.shape[2])]
+        internal_dists = np.where(matrices, paths, np.inf)
+        result = internal_dists.min(axis=1)
+        return np.where(matrices.any(axis=1), result, result.min())
+    except MemoryError:
+        print('Measuring density-based cohesion slowly', file=sys.stderr)
+        ans = []
+        for cl1 in range(n_clusters):
+            labels1 = internal_labels == cl1
+            for cl2 in range(cl1 + 1, n_clusters):
+                both_labels = labels1[:, None] & (internal_labels == cl2)[None, :]
+                ans.append(paths[squareform(both_labels | both_labels.T)].min())
+        return np.array(ans)
 
 
-def density_based_cluster_sparseness(dists, labels, internal_nodes_list=None, msts=None, d=2):
-    if internal_nodes_list is None or msts is None:
-        internal_nodes_list, msts = density_based_dists_and_internals(dists, labels, d=d)[2:]
-    return np.array([mst[internal_nodes].max() if internal_nodes.any() else 0 for mst, internal_nodes in
-                     zip(msts, internal_nodes_list)])
+def density_based_cluster_sparseness(dists, labels, d, n_clusters=None, mst=None, cluster_internals=None):
+    if n_clusters is None or mst is None or cluster_internals is None:
+        cluster_internals, mst, n_clusters = density_based_dists_and_internals(dists, labels, d)
+        # mst, n_clusters = density_based_dists_and_internals(dists, labels, d)
+    internal_nodes_list = (np.arange(0, n_clusters)[:, None] == labels[None, :]) & cluster_internals
+    return np.array([mst[internal_nodes][:, internal_nodes].max() if internal_nodes.any() else 0 for internal_nodes in
+                     internal_nodes_list])
+    # return np.array([mst[internal_nodes][:, internal_nodes].max() for internal_nodes in internal_nodes_list])
 
 
 def density_based_sparseness_separation(labels, indiv, ord=2, **kwargs):
-    return density_based_cluster_sparseness(cache_distances(indiv, ord=ord), labels)
+    return density_based_cluster_sparseness(cache_distances(indiv, ord=ord), labels, indiv['data'].shape[1])
 
 
-def density_based_cluster_validity(dists, labels, d=2, return_intcount=False):
+def density_based_cluster_validity(dists, labels, d, return_intcount=False):
     # ignore_points = cluster_counts[labels] > 1
     # if not ignore_points.all():
     #     ignore_clusters = np.cumsum(cluster_counts == 1)
@@ -126,28 +145,28 @@ def density_based_cluster_validity(dists, labels, d=2, return_intcount=False):
     #     labels -= ignore_clusters[labels]
     #     dists = dists[squareform(ignore_points[:, None] & ignore_points[None, :], checks=False)]
     #     cluster_counts = cluster_counts[cluster_counts > 1]
-    reach_dists, cluster_internals, internal_nodes_list, msts = density_based_dists_and_internals(dists, labels, d=d)
-    cluster_sparseness = density_based_cluster_sparseness(dists, labels, internal_nodes_list, msts, d=d)
-    internal_labels, internal_dists, internal_matrices = density_based_internal_dists(dists, labels,
-                                                                                      reach_dists=reach_dists,
-                                                                                      cluster_internals=cluster_internals,
-                                                                                      d=d)
+    cluster_internals, mst, n_clusters = density_based_dists_and_internals(dists, labels, d)
+    # mst, n_clusters = density_based_dists_and_internals(dists, labels, d)
+    cluster_sparseness = density_based_cluster_sparseness(dists, labels, d, n_clusters=n_clusters,
+                                                          mst=mst, cluster_internals=cluster_internals)
+    internal_labels, internal_matrices, paths = density_based_internal_dists(labels, cluster_internals, n_clusters, mst)
+    # internal_labels, internal_matrices, paths = density_based_internal_dists(labels, n_clusters, mst)
     matrices = np.logical_xor(internal_matrices[:, :, None], internal_matrices[:, None, :])
     matrices = matrices[:, squareform_matrix(len(internal_labels))]
-    internal_dists = np.where(matrices, internal_dists, np.inf)
+    internal_dists = np.where(matrices, paths, np.inf)
     cluster_separation = internal_dists.min(axis=1)
-    result = (cluster_separation - cluster_sparseness) / np.maximum(cluster_separation, cluster_sparseness)
+    result = np.where(matrices.any(axis=1), (cluster_separation - cluster_sparseness) / np.maximum(cluster_separation, cluster_sparseness), -1)
     if not return_intcount:
         return result
     intcount = np.bincount(internal_labels)
     if len(intcount) < len(result):
-        intcount = np.hstack(intcount, np.zeros(len(result) - len(intcount)))
+        intcount = np.hstack([intcount, np.zeros(len(result) - len(intcount))])
     return result, intcount
 
 
 def density_based_validity_separation(labels, indiv, ord=2, **kwargs):
-    result = density_based_cluster_validity(cache_distances(indiv, ord=ord), labels, d=2)
-    return result.max() - result
+    result = density_based_cluster_validity(cache_distances(indiv, ord=ord), labels, indiv['data'].shape[1])
+    return result.max() + result.min() - result
 
 
 def centroid_distance_cohesion(ord=2, **kwargs):
@@ -164,6 +183,8 @@ def construct_probabilities(values, the_less_the_better=True):
     # values = np.exp(-values - np.log(np.exp(-values).sum()))
     if len(values) == 1:
         return np.ones(1)
+    if values.min() < 0:
+        values = values - values.min()
     if the_less_the_better:
         values = values.max() + values.min() - values
     return values / values.sum()

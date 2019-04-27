@@ -6,12 +6,10 @@ import traceback
 import sys
 
 
-def run_one_plus_one(initialization, mutation, index, data, external_measure, logging, n_clusters=2, boundary=1e-9,
-                     num_tries=1000):
+def run_one_plus_one(initialization, mutation, index, data, logging, n_clusters=2, boundary=1e-9, num_tries=1000):
     c_solution = initialization(data, n_clusters)
     c_index = index(c_solution)
-    ground_truth = external_measure(c_solution)
-    logging(-1, c_index, c_solution, 0, ground_truth, False, True, 0, None)
+    logging(-1, c_index, c_solution, 0, False, True, 0, None)
     last_breakthrough = c_index
 
     def is_better(a, b):
@@ -42,17 +40,14 @@ def run_one_plus_one(initialization, mutation, index, data, external_measure, lo
                 at_least_one = True
                 n_mutations += 1
                 c_solution, c_index = n_solution, n_index
-                ground_truth = external_measure(c_solution)
-                if isnan(ground_truth):
-                    raise ValueError("External index equal to NaN")
                 if is_better(n_index, last_boundary()):
                     last_breakthrough, c_tries = c_index, 0
-                    logging(n_step, c_index, c_solution, n_mutations, ground_truth, False, True, start, detail)
+                    logging(n_step, c_index, c_solution, n_mutations, False, True, start, detail)
                     continue
                 else:
-                    logging(n_step, c_index, c_solution, n_mutations, ground_truth, True, True, start, detail)
+                    logging(n_step, c_index, c_solution, n_mutations, True, True, start, detail)
             else:
-                logging(n_step, c_index, c_solution, n_mutations, ground_truth, False, False, start, detail)
+                logging(n_step, c_index, c_solution, n_mutations, False, False, start, detail)
         if at_least_one:
             mutation.recalibrate()
         else:
@@ -60,11 +55,10 @@ def run_one_plus_one(initialization, mutation, index, data, external_measure, lo
     return c_index, c_solution
 
 
-def run_one_plus_lambda(initialization, moves, index, data, external_measure, logging, n_clusters=2, num_tries=250):
+def run_one_plus_lambda(initialization, moves, index, data, logging, n_clusters=2, num_tries=250):
     c_solution = initialization(data, n_clusters)
     c_index = index(c_solution)
-    ground_truth = external_measure(c_solution)
-    logging(-1, c_index, c_solution, 0, ground_truth, False, True, 0, None)
+    logging(-1, c_index, c_solution, 0, False, True, 0, None)
 
     def is_better(a, b):
         return a < b if index.is_minimized else a > b
@@ -85,14 +79,15 @@ def run_one_plus_lambda(initialization, moves, index, data, external_measure, lo
                 try:
                     start = time()
                     n_solution = mutation(c_solution)
-                    times.append(time() - start)
+                    start = time() - start
+                    n_solution, detail = n_solution if isinstance(n_solution, tuple) else (n_solution, None)
+                    n_index = index(n_solution)
+                    times.append(start)
                 except MutationNotApplicable:
                     return
                 except:
                     traceback.print_exc()
                     return
-                n_solution, detail = n_solution if isinstance(n_solution, tuple) else (n_solution, None)
-                n_index = index(n_solution)
                 if isnan(n_index):
                     print("Index equal to NaN for mutation " + i, file=sys.stderr)
                 mutation_indices.append(i)
@@ -115,16 +110,13 @@ def run_one_plus_lambda(initialization, moves, index, data, external_measure, lo
             for i, sol, timeV, indexV, detail in zip(mutation_indices, n_solutions, times, eval_indices, details):
                 sol.receive_feedback(i == successful_solution, timeV)
                 better_anyway = is_better(indexV, c_index)
-                logging(n_step, indexV if better_anyway else c_index, sol, n_mutations, ground_truth,
-                        better_anyway, i == successful_solution, timeV, detail)
+                logging(n_step, indexV if better_anyway else c_index, sol, n_mutations, better_anyway,
+                        i == successful_solution, timeV, detail)
 
             if successful_solution is not None:
                 at_least_one = True
                 n_mutations += 1
                 c_solution, c_index = successful_indiv, successful_index
-                ground_truth = external_measure(c_solution)
-                if isnan(ground_truth):
-                    raise ValueError("External index equal to NaN")
         if not at_least_one:
             break
     return c_index, c_solution

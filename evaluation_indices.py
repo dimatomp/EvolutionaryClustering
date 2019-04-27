@@ -30,15 +30,12 @@ def davies_bouldin_index(indiv):
     return davies_bouldin_score(indiv["data"], indiv["labels"])
 
 
-def dvcb_index(d=2):
-    @evaluation_index(minimize=False)
-    def index(indiv):
-        labels = indiv["labels"]
-        dists = cache_distances(indiv)
-        cluster_validities, cluster_counts = density_based_cluster_validity(dists, labels, d=d, return_intcount=True)
-        return (cluster_counts * cluster_validities).sum() / len(labels)
-
-    return index
+@evaluation_index(minimize=False)
+def dvcb_index(indiv: Individual):
+    labels = indiv["labels"]
+    dists = cache_distances(indiv)
+    cluster_validities, cluster_counts = density_based_cluster_validity(dists, labels, indiv['data'].shape[1], return_intcount=True)
+    return (cluster_counts * cluster_validities).sum() / len(labels)
 
 
 def generalized_dunn_index(separation, cohesion):

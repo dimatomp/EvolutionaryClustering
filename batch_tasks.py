@@ -1,25 +1,21 @@
+import os
+
 datas = [
     ('generated_2dim_10cl', 'load_generated_random_normal(2000, dim=2, n_clusters=10, prefix=generated_prefix)'),
     ('generated_2dim_30cl', 'load_generated_random_normal(2000, dim=2, n_clusters=30, prefix=generated_prefix)'),
     ('generated_10dim_10cl', 'load_generated_random_normal(2000, dim=10, n_clusters=10, prefix=generated_prefix)'),
     ('generated_10dim_30cl', 'load_generated_random_normal(2000, dim=10, n_clusters=30, prefix=generated_prefix)'),
-    ('iris', 'normalize_data(load_iris(prefix=real_prefix))'),
     ('immunotherapy', 'normalize_data(load_immunotherapy(prefix=real_prefix))'),
     ('user_knowledge', 'normalize_data(load_user_knowledge(prefix=real_prefix))'),
-    ('mfeat_morphological', 'normalize_data(load_mfeat_morphological(prefix=real_prefix))'),
-    ('glass', 'normalize_data(load_glass(prefix=real_prefix))'),
-    ('haberman', 'normalize_data(load_haberman(prefix=real_prefix))'),
-    ('heart_statlog', 'normalize_data(load_heart_statlog(prefix=real_prefix))'),
-    ('vehicle', 'normalize_data(load_vehicle(prefix=real_prefix))'),
-    ('liver_disorders', 'normalize_data(load_liver_disorders(prefix=real_prefix))'),
-    ('oil_spill', 'normalize_data(load_oil_spill(prefix=real_prefix))')
+    ('sales_transactions', 'load_sales_transactions(prefix=real_prefix)')
 ]
+
+
 indices = [
     ('silhouette', 'silhouette_index'),
     ('calinski_harabaz', 'calinski_harabaz_index'),
     ('davies_bouldin', 'davies_bouldin_index'),
-    ('dvcb_2', 'dvcb_index()'),
-    # ('dvcb_5', 'dvcb_index(d=5)'),
+    ('dvcb', 'dvcb_index'),
     ('dunn', 'dunn_index'),
     ('generalized_dunn_41', 'generalized_dunn_index(separation="centroid_distance", cohesion="diameter")'),
     ('generalized_dunn_43', 'generalized_dunn_index(separation="centroid_distance", cohesion="mean_distance")'),
@@ -53,8 +49,7 @@ mutations = [
     # Trivial policies
     # ('all_mutations_trivial', 'axis_initialization', 'all_moves_mutation(silent=True)'),
     # ('all_mutations_dynamic', 'axis_initialization', 'all_moves_dynamic_mutation(silent=True)')
-    ('one_plus_lambda=10_random_moves', 'axis_initialization',
-     'RandomMovesFromList(10, list(map(SingleMoveMutation, get_all_moves())))')
+    ('one_plus_lambda_all_moves', 'tree_initialization', 'list(map(SingleMoveMutation, get_all_moves()))')
 ]
 
 
@@ -62,13 +57,17 @@ def get_file_name(index, data, mutation):
     return '{}-{}-{}.txt'.format(index, data, mutation)
 
 
-# tasks = [('state-of-the-art.txt', 'run_state_of_the_art([datas, indices])')]
-tasks = []
-for mutation_name, init, mutation in mutations:
-    for index_name, index in indices:
-        for data_name, data in datas:
-            fname = get_file_name(index_name, data_name, mutation_name)
-            tasks.append((fname,
-                          "run_one_plus_lambda_task(output_prefix + '/' + '{}', {}, {}, {}, {})".format(fname, index,
-                                                                                                        data, init,
-                                                                                                        mutation)))
+def init_batch(real_prefix):
+    for s in sorted(os.listdir(real_prefix + '/regular')):
+        datas.append(
+            (s[:s.find('.')].replace('-', '_'), 'normalize_data(load_from_file("{}", prefix="{}/regular"))'.format(s, real_prefix)))
+    tasks = []
+    for mutation_name, init, mutation in mutations:
+        for index_name, index in indices:
+            for data_name, data in datas:
+                fname = get_file_name(index_name, data_name, mutation_name)
+                tasks.append((fname,
+                              "run_one_plus_lambda_task(output_prefix + '/' + '{}', {}, {}, {}, {})".format(fname, index,
+                                                                                                            data, init,
+                                                                                                            mutation)))
+    return tasks
