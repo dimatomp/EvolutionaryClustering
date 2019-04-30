@@ -48,30 +48,23 @@ def run_state_of_the_art(args):
 def run_one_plus_one_task(fname, index, data, initialization, mutation, logging=None):
     print('Launching', fname, file=sys.stderr)
     with open(fname, 'w') as f:
-        try:
-            logging = logging(f) if logging is not None else CSVLogger(f, log_unsuccessful=True)
-            if test_mode:
-                print('Loaded', fname, file=f)
-                return
-            run_one_plus_one(initialization, mutation, index, data, logging=logging,
-                             n_clusters=int(np.cbrt(len(data))))
-        except:
-            traceback.print_exc(file=f)
+        logging = logging(f) if logging is not None else CSVLogger(f, log_unsuccessful=True)
+        if test_mode:
+            print('Loaded', fname, file=f)
+            return
+        run_one_plus_one(initialization, mutation, index, data, logging=logging, n_clusters=int(np.cbrt(len(data))))
     print('Finished', fname, file=sys.stderr)
 
 
 def run_one_plus_lambda_task(fname, index, data, initialization, moves, logging=None):
     print('Launching', fname, file=sys.stderr)
     with open(fname, 'w') as f:
-        try:
-            logging = logging(f) if logging is not None else CSVLogger(f, log_unsuccessful=True)
-            if test_mode:
-                print('Loaded', fname, file=f)
-                return
-            run_one_plus_lambda(initialization, moves, index, data, logging=logging,
-                                n_clusters=int(np.cbrt(len(data))))
-        except:
-            traceback.print_exc(file=f)
+        logging = logging(f) if logging is not None else CSVLogger(f, log_unsuccessful=True)
+        if test_mode:
+            print('Loaded', fname, file=f)
+            return
+        run_one_plus_lambda(initialization, moves, index, data, logging=logging, n_clusters=int(np.cbrt(len(data))))
+    print('Finished', fname, file=sys.stderr)
 
 
 if __name__ == "__main__":
