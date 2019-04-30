@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import sys
 from sklearn.preprocessing import normalize
 
 
@@ -21,7 +22,7 @@ def generated_file_name(max_points, dim=None, n_clusters=None):
 def load_generated_random_normal(max_points, dim=None, n_clusters=None, prefix='.'):
     fname = prefix + '/' + generated_file_name(max_points, dim, n_clusters)
     datas = np.loadtxt(fname, delimiter=',')
-    return datas[:, :-1]#, datas[:, -1]
+    return datas[:, :-1]  # , datas[:, -1]
 
 
 def normalize_data(dataset):
@@ -34,25 +35,34 @@ def load_immunotherapy(prefix='.'):
     return dataset.values
 
 
-def load_user_knowledge(prefix='.'):
-    dataset = pd.read_excel(prefix + '/Data_User_Modeling_Dataset_Hamdi Tolga KAHRAMAN.xls', sheet_name=1)
-    data = dataset.values[:, :-3].astype('float')
-    return data
-
-
-def load_from_file(fname, prefix='.'):
-    dataset = pd.read_csv(prefix + '/' + fname)
+def transform_dataset(dataset):
     cols = []
-    for col, dtype in zip(dataset.columns, dataset.dtypes):
-        elems = np.unique(dataset[col])
-        if len(elems) == 1:
+    for i, (col, dtype) in enumerate(zip(dataset.columns, dataset.dtypes)):
+        try:
+            elems = np.unique(dataset[col])
+        except TypeError:
+            elems = np.array(list(set(dataset[col])))
+        if len(elems) == 1 or len(elems) == len(dataset) and dtype.kind in "iu" and i == 0:
+            # it's either a single value or most likely an ID column
+            print('Excluding column number', i, 'because it is',
+                  'a single value' if len(elems) == 1 else 'most likely an index column', file=sys.stderr)
             continue
         if dtype.kind in "fiu":
             cols.append(dataset[col])
         else:
+            elems = np.array(list(sorted(elems)))
             indices = np.argwhere(dataset[col][:, None] == elems[None, :])[:, 1]
             cols.append(indices.flatten())
     return np.array(cols).T
+
+
+def load_user_knowledge(prefix='.'):
+    dataset = pd.read_excel(prefix + '/Data_User_Modeling_Dataset_Hamdi Tolga KAHRAMAN.xls', sheet_name=1)
+    return transform_dataset(dataset[dataset.columns[:-3]])
+
+
+def load_from_file(fname, prefix='.'):
+    return transform_dataset(pd.read_csv(prefix + '/' + fname))
 
 
 def load_sales_transactions(prefix='.'):

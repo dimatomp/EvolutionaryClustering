@@ -103,23 +103,23 @@ def density_based_separation_cohesion(labels, indiv, ord=2, **kwargs):
     # mst, n_clusters = density_based_dists_and_internals(cache_distances(indiv, ord=ord), labels, indiv['data'].shape[1])
     internal_labels, internal_matrices, paths = density_based_internal_dists(labels, cluster_internals, n_clusters, mst)
     # internal_labels, internal_matrices, paths = density_based_internal_dists(labels, n_clusters, mst)
-    try:
-        matrices = internal_matrices[:, None, :, None] & internal_matrices[None, :, None, :]
-        matrices = matrices[squareform_matrix(matrices.shape[0]), :, :]
-        np.logical_or(matrices, np.swapaxes(matrices, 1, 2), out=matrices)
-        matrices = matrices[:, squareform_matrix(matrices.shape[2])]
-        internal_dists = np.where(matrices, paths, np.inf)
-        result = internal_dists.min(axis=1)
-        return np.where(matrices.any(axis=1), result, result.min())
-    except MemoryError:
-        print('Measuring density-based cohesion slowly', file=sys.stderr)
-        ans = []
-        for cl1 in range(n_clusters):
-            labels1 = internal_labels == cl1
-            for cl2 in range(cl1 + 1, n_clusters):
-                both_labels = labels1[:, None] & (internal_labels == cl2)[None, :]
-                ans.append(paths[squareform(both_labels | both_labels.T)].min())
-        return np.array(ans)
+    #try:
+    matrices = internal_matrices[:, None, :, None] & internal_matrices[None, :, None, :]
+    matrices = matrices[squareform_matrix(matrices.shape[0]), :, :]
+    np.logical_or(matrices, np.swapaxes(matrices, 1, 2), out=matrices)
+    matrices = matrices[:, squareform_matrix(matrices.shape[2])]
+    internal_dists = np.where(matrices, paths, np.inf)
+    result = internal_dists.min(axis=1)
+    return np.where(matrices.any(axis=1), result, result.min())
+    #except MemoryError:
+    #    print('Measuring density-based cohesion slowly', file=sys.stderr)
+    #    ans = []
+    #    for cl1 in range(n_clusters):
+    #        labels1 = internal_labels == cl1
+    #        for cl2 in range(cl1 + 1, n_clusters):
+    #            both_labels = labels1[:, None] & (internal_labels == cl2)[None, :]
+    #            ans.append(paths[squareform(both_labels | both_labels.T)].min())
+    #    return np.array(ans)
 
 
 def density_based_cluster_sparseness(dists, labels, d, n_clusters=None, mst=None, cluster_internals=None):
@@ -166,7 +166,7 @@ def density_based_cluster_validity(dists, labels, d, return_intcount=False):
 
 def density_based_validity_separation(labels, indiv, ord=2, **kwargs):
     result = density_based_cluster_validity(cache_distances(indiv, ord=ord), labels, indiv['data'].shape[1])
-    return result.max() + result.min() - result
+    return 1 - result
 
 
 def centroid_distance_cohesion(ord=2, **kwargs):
@@ -181,10 +181,8 @@ all_separations = ['density_based_validity_separation', 'density_based_sparsenes
 
 def construct_probabilities(values, the_less_the_better=True):
     # values = np.exp(-values - np.log(np.exp(-values).sum()))
-    if len(values) == 1:
-        return np.ones(1)
-    if values.min() < 0:
-        values = values - values.min()
+    if len(np.unique(values)) == 1:
+        return np.ones(len(values)) / len(values)
     if the_less_the_better:
         values = values.max() + values.min() - values
     return values / values.sum()

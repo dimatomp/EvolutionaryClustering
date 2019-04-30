@@ -10,7 +10,6 @@ datas = [
     ('sales_transactions', 'load_sales_transactions(prefix=real_prefix)')
 ]
 
-
 indices = [
     ('silhouette', 'silhouette_index'),
     ('calinski_harabaz', 'calinski_harabaz_index'),
@@ -58,16 +57,18 @@ def get_file_name(index, data, mutation):
 
 
 def init_batch(real_prefix):
-    for s in sorted(os.listdir(real_prefix + '/regular')):
-        datas.append(
-            (s[:s.find('.')].replace('-', '_'), 'normalize_data(load_from_file("{}", prefix="{}/regular"))'.format(s, real_prefix)))
+    for s in sorted(os.listdir(real_prefix + '/regular') + os.listdir(real_prefix + '/regular/invalid')):
+        if s != 'invalid':
+            datas.append((s[:s.find('.')].replace('-', '_'),
+                          'normalize_data(load_from_file("{}", prefix="{}/regular"))'.format(s, real_prefix)))
     tasks = []
     for mutation_name, init, mutation in mutations:
         for index_name, index in indices:
             for data_name, data in datas:
                 fname = get_file_name(index_name, data_name, mutation_name)
                 tasks.append((fname,
-                              "run_one_plus_lambda_task(output_prefix + '/' + '{}', {}, {}, {}, {})".format(fname, index,
+                              "run_one_plus_lambda_task(output_prefix + '/' + '{}', {}, {}, {}, {})".format(fname,
+                                                                                                            index,
                                                                                                             data, init,
                                                                                                             mutation)))
     return tasks
