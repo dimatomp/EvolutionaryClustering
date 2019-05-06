@@ -46,9 +46,8 @@ mutations = [
     # ('split_eliminate', 'axis_initialization', 'split_eliminate_mutation'),
     # ('split_merge_move', 'axis_initialization', 'split_merge_move_mutation'),
     # Trivial policies
-    # ('all_mutations_trivial', 'axis_initialization', 'all_moves_mutation(silent=True)'),
+    ('all_mutations_trivial', 'tree_initialization', 'all_moves_mutation(silent=True)'),
     # ('all_mutations_dynamic', 'axis_initialization', 'all_moves_dynamic_mutation(silent=True)')
-    ('one_plus_lambda_all_moves', 'tree_initialization', 'list(map(SingleMoveMutation, get_all_moves()))')
 ]
 
 
@@ -57,7 +56,7 @@ def get_file_name(index, data, mutation):
 
 
 def init_batch(real_prefix):
-    for s in sorted(os.listdir(real_prefix + '/regular') + os.listdir(real_prefix + '/regular/invalid')):
+    for s in sorted(os.listdir(real_prefix + '/regular')): # + os.listdir(real_prefix + '/regular/invalid')):
         if s != 'invalid':
             datas.append((s[:s.find('.')].replace('-', '_'),
                           'normalize_data(load_from_file("{}", prefix="{}/regular"))'.format(s, real_prefix)))
@@ -67,8 +66,7 @@ def init_batch(real_prefix):
             for data_name, data in datas:
                 fname = get_file_name(index_name, data_name, mutation_name)
                 tasks.append((fname,
-                              "run_one_plus_lambda_task(output_prefix + '/' + '{}', {}, {}, {}, {})".format(fname,
-                                                                                                            index,
-                                                                                                            data, init,
-                                                                                                            mutation)))
+                              "run_one_plus_one_task(output_prefix + '/' + '{}', {}, {}, {}, {})".format(fname, index,
+                                                                                                         data, init,
+                                                                                                         mutation)))
     return tasks

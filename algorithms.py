@@ -6,7 +6,7 @@ import traceback
 import sys
 
 
-def run_one_plus_one(initialization, mutation, index, data, logging, n_clusters=2, boundary=1e-9, num_tries=1000):
+def run_one_plus_one(initialization, mutation, index, data, logging, n_clusters=2, boundary=1e-9, num_tries=250):
     c_solution = initialization(data, n_clusters)
     c_index = index(c_solution)
     logging(-1, c_index, c_solution, 0, False, True, 0, None)
@@ -42,12 +42,12 @@ def run_one_plus_one(initialization, mutation, index, data, logging, n_clusters=
                 c_solution, c_index = n_solution, n_index
                 if is_better(n_index, last_boundary()):
                     last_breakthrough, c_tries = c_index, 0
-                    logging(n_step, c_index, c_solution, n_mutations, False, True, start, detail)
+                    logging(n_step, c_index, n_solution, n_mutations, False, True, start, detail)
                     continue
                 else:
-                    logging(n_step, c_index, c_solution, n_mutations, True, True, start, detail)
+                    logging(n_step, c_index, n_solution, n_mutations, True, True, start, detail)
             else:
-                logging(n_step, c_index, c_solution, n_mutations, False, False, start, detail)
+                logging(n_step, c_index, n_solution, n_mutations, False, False, start, detail)
         if at_least_one:
             mutation.recalibrate()
         else:
