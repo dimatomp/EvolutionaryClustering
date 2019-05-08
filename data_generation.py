@@ -66,4 +66,4 @@ def load_from_file(fname, prefix='.'):
 
 
 def load_sales_transactions(prefix='.'):
-    return load_from_file('Sales_Transactions_Dataset_Weekly.csv', prefix=prefix)[:, 53:]
+    return load_from_file('Sales_Transactions_Dataset_Weekly.csv', prefix=prefix)[:, 55:]

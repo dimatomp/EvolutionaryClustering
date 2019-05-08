@@ -1,4 +1,4 @@
-from sklearn.metrics import silhouette_score, calinski_harabaz_score, davies_bouldin_score
+from sklearn.metrics import silhouette_score, calinski_harabaz_score
 from cluster_measures import *
 
 
@@ -27,7 +27,19 @@ def calinski_harabaz_index(indiv):
 
 @evaluation_index(minimize=True)
 def davies_bouldin_index(indiv):
-    return davies_bouldin_score(indiv["data"], indiv["labels"])
+    data, labels = indiv['data'], indiv['labels']
+    clusters, centroids = get_clusters_and_centroids(labels, data)
+    intra_dists = mean_centroid_distance_separation(clusters=clusters, centroids=centroids)
+
+    centroid_distances = squareform(pdist(centroids))
+
+    if np.allclose(intra_dists, 0) or np.allclose(centroid_distances, 0):
+        return 0.0
+
+    centroid_distances[centroid_distances == 0] = np.inf
+    combined_intra_dists = intra_dists[:, None] + intra_dists
+    scores = np.max(combined_intra_dists / centroid_distances, axis=1)
+    return np.mean(scores)
 
 
 @evaluation_index(minimize=False)
