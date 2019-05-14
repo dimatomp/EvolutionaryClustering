@@ -46,8 +46,9 @@ mutations = [
     # ('split_eliminate', 'axis_initialization', 'split_eliminate_mutation'),
     # ('split_merge_move', 'axis_initialization', 'split_merge_move_mutation'),
     # Trivial policies
-    ('all_mutations_trivial', 'tree_initialization', 'all_moves_mutation(silent=True)'),
-    # ('all_mutations_dynamic', 'axis_initialization', 'all_moves_dynamic_mutation(silent=True)')
+    # ('all_mutations_trivial', 'tree_initialization', 'all_moves_mutation(silent=True)'),
+    # ('all_mutations_dynamic', 'axis_initialization', 'all_moves_dynamic_mutation(silent=True)'),
+    ('one_plus_lambda_all_moves', 'tree_initialization', 'list(map(SingleMoveMutation, get_all_moves()))'),
 ]
 
 
