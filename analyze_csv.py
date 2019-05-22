@@ -7,26 +7,31 @@ from io import StringIO
 from itertools import chain
 
 
-def read_results(fname):
-    with open(fname, 'r') as f:
-        content = f.read()
-    if content.find('Traceback') != -1:
-        raise ValueError('File has traceback')
-    content = content.split('\n')
-    while content[-1] == '':
-        content = content[:-1]
-    old_format = content[-3].startswith('Running') or content[-3].startswith('Resulting')
-    if old_format:
-        running_time = None
-        for s in content[-3:]:
-            if s.startswith('Running time'):
-                running_time = float(s[13:s.find(' seconds')])
-        content = content[:-3]
-    logs = StringIO('\n'.join(content))
-    data = pd.read_csv(logs, index_col='generation')
-    if not old_format:
-        running_time = data.iloc[-1]['time']
-    return data, running_time
+def read_results(fname, accept_old_format=False):
+    if accept_old_format:
+        with open(fname, 'r') as f:
+            content = f.read()
+        if content.find('Traceback') != -1:
+            raise ValueError('File has traceback')
+        content = content.split('\n')
+        while content[-1] == '':
+            content = content[:-1]
+        old_format = content[-3].startswith('Running') or content[-3].startswith('Resulting')
+        if old_format:
+            running_time = None
+            for s in content[-3:]:
+                if s.startswith('Running time'):
+                    running_time = float(s[13:s.find(' seconds')])
+            content = content[:-3]
+        logs = StringIO('\n'.join(content))
+    else:
+        logs = open(fname, 'r')
+        old_format = False
+    with logs:
+        data = pd.read_csv(logs, index_col='generation')
+        if not old_format:
+            running_time = data.iloc[-1]['time']
+        return data, running_time
 
 
 def load_strategy_data(getter, prefix='.'):
