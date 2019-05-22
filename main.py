@@ -6,6 +6,7 @@ from data_generation import *
 from evaluation_indices import *
 from batch_tasks import *
 from log_handlers import *
+from selective_mutations import *
 from sklearn.metrics import adjusted_rand_score
 from sklearn.cluster import KMeans, AffinityPropagation, AgglomerativeClustering, MeanShift
 from time import time
@@ -14,6 +15,7 @@ import traceback
 generated_prefix = '.'
 real_prefix = '.'
 output_prefix = '.'
+predicted_prefix = '.'
 test_mode = '--test' in sys.argv
 
 
@@ -70,12 +72,13 @@ def run_one_plus_lambda_task(fname, index, data, initialization, moves, logging=
 if __name__ == "__main__":
     real_prefix = sys.argv[1]
     tasks = init_batch(real_prefix)
-    if len(sys.argv) == 5:
+    if len(sys.argv) == 6:
         generated_prefix = sys.argv[2]
         output_prefix = sys.argv[3]
+        predicted_prefix = sys.argv[4]
     if len(sys.argv) == 2:
         print('Total', len(tasks), 'tasks to run')
     elif len(sys.argv) == 3:
         print(tasks[int(sys.argv[2])][0])
     else:
-        eval(tasks[int(sys.argv[4])][1])
+        eval(tasks[int(sys.argv[5])][1])

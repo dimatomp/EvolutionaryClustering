@@ -48,7 +48,10 @@ mutations = [
     # Trivial policies
     # ('all_mutations_trivial', 'tree_initialization', 'all_moves_mutation(silent=True)'),
     # ('all_mutations_dynamic', 'axis_initialization', 'all_moves_dynamic_mutation(silent=True)'),
-    ('one_plus_lambda_all_moves', 'tree_initialization', 'list(map(SingleMoveMutation, get_all_moves()))'),
+    # ('one_plus_lambda_all_moves', 'tree_initialization', 'list(map(SingleMoveMutation, get_all_moves()))'),
+    # Predicted policies
+    ('true_mutations_trivial', 'tree_initialization', 'true_moves_mutation("{0}", "{1}")'),
+    ('predicted_mutations_trivial', 'tree_initialization', 'predicted_moves_mutation("{0}", "{1}", prefix=predicted_prefix)')
 ]
 
 
@@ -57,7 +60,7 @@ def get_file_name(index, data, mutation):
 
 
 def init_batch(real_prefix):
-    for s in sorted(os.listdir(real_prefix + '/regular')): # + os.listdir(real_prefix + '/regular/invalid')):
+    for s in sorted(os.listdir(real_prefix + '/regular')):  # + os.listdir(real_prefix + '/regular/invalid')):
         if s != 'invalid':
             datas.append((s[:s.find('.')].replace('-', '_'),
                           'normalize_data(load_from_file("{}", prefix="{}/regular"))'.format(s, real_prefix)))
@@ -69,5 +72,7 @@ def init_batch(real_prefix):
                 tasks.append((fname,
                               "run_one_plus_one_task(output_prefix + '/' + '{}', {}, {}, {}, {})".format(fname, index,
                                                                                                          data, init,
-                                                                                                         mutation)))
+                                                                                                         mutation.format(
+                                                                                                             data_name,
+                                                                                                             index_name))))
     return tasks
