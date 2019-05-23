@@ -50,8 +50,8 @@ mutations = [
     # ('all_mutations_dynamic', 'axis_initialization', 'all_moves_dynamic_mutation(silent=True)'),
     # ('one_plus_lambda_all_moves', 'tree_initialization', 'list(map(SingleMoveMutation, get_all_moves()))'),
     # Predicted policies
-    ('true_mutations_trivial', 'tree_initialization', 'true_moves_mutation("{0}", "{1}")'),
-    ('predicted_mutations_trivial', 'tree_initialization', 'predicted_moves_mutation("{0}", "{1}", prefix=predicted_prefix)')
+    ('true_mutations_trivial', 'tree_initialization', 'true_moves_mutation("{0}", "{1}", silent=True)'),
+    ('predicted_mutations_trivial', 'tree_initialization', 'predicted_moves_mutation("{0}", "{1}", prefix=predicted_prefix, silent=True)')
 ]
 
 

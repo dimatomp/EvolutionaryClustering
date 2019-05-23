@@ -3,16 +3,16 @@ import pandas as pd
 import pickle
 
 
-def true_moves_mutation(dataset, index):
+def true_moves_mutation(dataset, index, **kwargs):
     with open('mutation_usage.dat', 'rb') as f:
         mutation_usage = pickle.load(f)
     fname = "{}-{}-one_plus_lambda_all_moves.txt".format(index, dataset)
     for name, usage in mutation_usage:
         if name == fname:
-            return TrivialStrategyMutation(list(np.array(get_all_moves())[usage]))
+            return TrivialStrategyMutation(list(np.array(get_all_moves())[usage]), **kwargs)
 
 
-def predicted_moves_mutation(dataset, index, prefix='.'):
+def predicted_moves_mutation(dataset, index, prefix='.', **kwargs):
     with open('cv10.dat', 'rb') as f:
         cv10 = pickle.load(f)
     for i, s in enumerate(cv10):
@@ -25,4 +25,4 @@ def predicted_moves_mutation(dataset, index, prefix='.'):
                 index)
             row = np.argwhere((frame['index'] == index) & (frame['dataname'] == dataset))
             assert row.shape == (1,)
-            return TrivialStrategyMutation(list(np.array(get_all_moves())[pred[row]]))
+            return TrivialStrategyMutation(list(np.array(get_all_moves())[pred[row]]), **kwargs)
