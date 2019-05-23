@@ -23,6 +23,5 @@ def predicted_moves_mutation(dataset, index, prefix='.', **kwargs):
             index = ['silhouette', 'calinski_harabaz', 'davies_bouldin', 'dvcb', 'dunn', 'generalized_dunn_41',
                      'generalized_dunn_43', 'generalized_dunn_51', 'generalized_dunn_53', 'generalized_dunn_13'].index(
                 index)
-            row = np.argwhere((frame['index'] == index) & (frame['dataname'] == dataset))
-            assert row.shape == (1,)
-            return TrivialStrategyMutation(list(np.array(get_all_moves())[pred[row]]), **kwargs)
+            row = np.argwhere((frame['index'] == index) & (frame['dataname'] == dataset))[0, 0]
+            return TrivialStrategyMutation(list(np.array(get_all_moves())[pred[row].astype('bool')]), **kwargs)
