@@ -104,21 +104,29 @@ class TrivialStrategyMutation:
 
     def __call__(self, indiv: Individual):
         indiv_backup, indiv = indiv, indiv.copy()
+        strategy_names = list(self.strategy_names)
+        strategies = list(self.strategies)
+        strategy_index = None
         while True:
-            strategy_index = np.random.choice(len(self.strategy_names))
+            if strategy_index is not None:
+                strategy_names = strategy_names[:strategy_index] = strategy_names[strategy_index+1:]
+                strategies = strategies[:strategy_index] = strategies[strategy_index+1:]
+            if len(strategy_names) == 0:
+                raise MutationNotApplicable
+            strategy_index = np.random.choice(len(strategy_names))
             try:
-                detail = "{}: {}".format(self.strategy_names[strategy_index], self.strategies[strategy_index](indiv))
+                detail = "{}: {}".format(strategy_names[strategy_index], strategies[strategy_index](indiv))
                 cleanup_empty_clusters(indiv['labels'])
             except MutationNotApplicable as e:
                 indiv = indiv_backup.copy()
                 if e.replacement is not None:
-                    strategy_index = self.strategy_names.index(e.replacement)
-                    detail = "{}: {}".format(self.strategy_names[strategy_index],
-                                             self.strategies[strategy_index](indiv))
+                    strategy_index = strategy_names.index(e.replacement)
+                    detail = "{}: {}".format(strategy_names[strategy_index],
+                                             strategies[strategy_index](indiv))
                     cleanup_empty_clusters(indiv['labels'])
                 else:
                     if not self.silent:
-                        print('Mutation {} not applicable'.format(self.strategy_names[strategy_index]), file=sys.stderr)
+                        print('Mutation {} not applicable'.format(strategy_names[strategy_index]), file=sys.stderr)
                     continue
             except:
                 traceback.print_exc()

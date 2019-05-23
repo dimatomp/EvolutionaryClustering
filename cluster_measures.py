@@ -74,7 +74,6 @@ def density_based_dists_and_internals(dists, labels, d):
     reach_dists = squareform(np.maximum(coredist[:, None], coredist[None, :]), checks=False)
     reach_dists = np.maximum(reach_dists, dists)
     mst = minimum_spanning_tree(squareform(reach_dists))
-    rows, cols = mst.nonzero()
     rows, cols, vals = find(mst)
     mst = csr_matrix((np.hstack([vals, vals]), (np.hstack([rows, cols]), np.hstack([cols, rows]))), shape=(len(labels), len(labels)))
     rows, cols = np.bincount(rows), np.bincount(cols)
