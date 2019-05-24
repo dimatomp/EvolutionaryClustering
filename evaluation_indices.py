@@ -29,6 +29,8 @@ def calinski_harabaz_index(indiv):
 def davies_bouldin_index(indiv):
     data, labels = indiv['data'], indiv['labels']
     clusters, centroids = get_clusters_and_centroids(labels, data)
+    if len(clusters) >= 80:
+        raise ValueError('Cluster count exceeds threshold, aborting')
     intra_dists = mean_centroid_distance_separation(clusters=clusters, centroids=centroids)
 
     centroid_distances = squareform(pdist(centroids))
