@@ -109,8 +109,8 @@ class TrivialStrategyMutation:
         strategy_index = None
         while True:
             if strategy_index is not None:
-                strategy_names = strategy_names[:strategy_index] = strategy_names[strategy_index+1:]
-                strategies = strategies[:strategy_index] = strategies[strategy_index+1:]
+                strategy_names = strategy_names[:strategy_index] + strategy_names[strategy_index+1:]
+                strategies = strategies[:strategy_index] + strategies[strategy_index+1:]
             if len(strategy_names) == 0:
                 raise MutationNotApplicable
             strategy_index = np.random.choice(len(strategy_names))
