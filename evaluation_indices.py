@@ -7,8 +7,10 @@ def evaluation_index(minimize):
         class EvaluationIndex:
             is_minimized = minimize
 
-            def __call__(self, *args, **kwargs):
-                return idx(*args, **kwargs)
+            def __call__(self, indiv, *args, **kwargs):
+                if len(np.unique(indiv['labels'])) >= 70:
+                    raise ValueError('Cluster count exceeds threshold, aborting')
+                return idx(indiv, *args, **kwargs)
 
         return EvaluationIndex()
 
@@ -29,8 +31,6 @@ def calinski_harabaz_index(indiv):
 def davies_bouldin_index(indiv):
     data, labels = indiv['data'], indiv['labels']
     clusters, centroids = get_clusters_and_centroids(labels, data)
-    if len(clusters) >= 70:
-        raise ValueError('Cluster count exceeds threshold, aborting')
     intra_dists = mean_centroid_distance_separation(clusters=clusters, centroids=centroids)
 
     centroid_distances = squareform(pdist(centroids))
