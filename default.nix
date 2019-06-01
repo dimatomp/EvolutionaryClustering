@@ -1,4 +1,4 @@
-with import <nixos-18.09> { overlays = [(self: super: {
+with import <nixos-18.03> { overlays = [(self: super: {
   xgboost = super.xgboost.overrideAttrs (oldAttrs: rec {
     name = "xgboost-${version}";
     version = "0.82";
@@ -75,6 +75,16 @@ let
 
       matplotlib = super.matplotlib.override { enableQt = true; };
 
+      pynisher = buildPythonPackage rec {
+        pname = "pynisher";
+        version = "0.5.0";
+        src = fetchPypi {
+          inherit pname version;
+          sha256 = "0d1zjncnsdnyq8igq0s5wrj449z5d8gp1bf913hrs06ib8qpj40v";
+        };
+        propagatedBuildInputs = with self; [ psutil docutils ];
+      };
+
       auto-sklearn = buildPythonPackage rec {
         pname = "auto-sklearn";
         version = "0.5.1";
@@ -87,4 +97,4 @@ let
       };
     };
 in
-  ((python3.override { packageOverrides = pythonPackageOverrides; }).withPackages (pkgs: with pkgs; [numpy scipy matplotlib scikitlearn pyqt5 notebook pandas ipython auto-sklearn virtualenv])).env
+  ((python3.override { packageOverrides = pythonPackageOverrides; }).withPackages (pkgs: with pkgs; [numpy scipy matplotlib scikitlearn pyqt5 notebook pandas ipython auto-sklearn pulp]))

@@ -77,7 +77,7 @@ def run_one_plus_lambda_task(fname, index, data, initialization, moves, logging=
 def run_shalamov(fname, index, data):
     print('Launching', fname, file=sys.stderr)
     with open(fname, 'w') as f:
-        algo_e = RLrfrsAlgoEx(index, data, randrange(2 ** 32), batch_size, expansion=100)
+        algo_e = RLrfrsAlgoEx(index, data, 42, batch_size, expansion=100)
         mab_solver = SoftmaxR(action=algo_e, time_limit=3600)
         mab_solver.initialize(f, None)
         start = time()
