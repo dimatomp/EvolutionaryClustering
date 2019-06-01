@@ -1,3 +1,8 @@
+from random import randrange
+
+from MultiClustering.Constants import bandit_iterations, batch_size
+from MultiClustering.RLrfAlgoEx import RLrfrsAlgoEx
+from MultiClustering.mab_solvers.Smx_R import SoftmaxR
 from algorithms import *
 from log_handlers import *
 from initialization import *
@@ -66,6 +71,19 @@ def run_one_plus_lambda_task(fname, index, data, initialization, moves, logging=
             print('Loaded', fname, file=f)
             return
         run_one_plus_lambda(initialization, moves, index, data, logging=logging, n_clusters=int(np.cbrt(len(data))))
+    print('Finished', fname, file=sys.stderr)
+
+
+def run_shalamov(fname, index, data):
+    print('Launching', fname, file=sys.stderr)
+    with open(fname, 'w') as f:
+        algo_e = RLrfrsAlgoEx(index, data, randrange(2 ** 32), batch_size, expansion=100)
+        mab_solver = SoftmaxR(action=algo_e, time_limit=3600)
+        mab_solver.initialize(f, None)
+        start = time()
+        mab_solver.iterate(bandit_iterations, f)
+        start = time() - start
+        print("Running time", start, file=f)
     print('Finished', fname, file=sys.stderr)
 
 

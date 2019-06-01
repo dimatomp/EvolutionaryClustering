@@ -7,6 +7,9 @@ def evaluation_index(minimize):
         class EvaluationIndex:
             is_minimized = minimize
 
+            def __str__(self):
+                return idx.__name__
+
             def __call__(self, indiv, *args, **kwargs):
                 if len(np.unique(indiv['labels'])) >= 70:
                     raise ValueError('Cluster count exceeds threshold, aborting')

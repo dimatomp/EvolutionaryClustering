@@ -4,3 +4,6 @@
 [submodule "uci_ml_api"]
 	path = uci_ml_api
 	url = https://github.com/tirthajyoti/UCI-ML-API.git
+[submodule "MultiClustering"]
+	path = MultiClustering
+	url = https://github.com/valeryefimova/MultiClustering.git

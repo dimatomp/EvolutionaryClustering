@@ -87,4 +87,4 @@ let
       };
     };
 in
-  ((python3.override { packageOverrides = pythonPackageOverrides; }).withPackages (pkgs: with pkgs; [numpy scipy matplotlib scikitlearn pyqt5 notebook pandas ipython auto-sklearn])).env
+  ((python3.override { packageOverrides = pythonPackageOverrides; }).withPackages (pkgs: with pkgs; [numpy scipy matplotlib scikitlearn pyqt5 notebook pandas ipython auto-sklearn virtualenv])).env
