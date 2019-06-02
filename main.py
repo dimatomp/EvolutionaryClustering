@@ -74,16 +74,21 @@ def run_one_plus_lambda_task(fname, index, data, initialization, moves, logging=
     print('Finished', fname, file=sys.stderr)
 
 
-def run_shalamov(fname, index, data):
+def run_shalamov(fname, index, data, index_name, data_name):
     print('Launching', fname, file=sys.stderr)
+    times = pd.read_csv('shalamov_running_times.csv', index_col=0)
+    time_limit = times[(times['index'] == index_name) & (times['dataset'] == data_name)]['time_predicted_mean'].values
+    assert time_limit.shape == (1,)
+    time_limit = min(time_limit[0], 600)
     with open(fname, 'w') as f:
-        algo_e = RLrfrsAlgoEx(index, data, 42, batch_size, expansion=100)
-        mab_solver = SoftmaxR(action=algo_e, time_limit=3600)
+        algo_e = RLrfrsAlgoEx(index, data, randrange(2 ** 32), batch_size, expansion=100)
+        mab_solver = SoftmaxR(action=algo_e, time_limit=time_limit)
         mab_solver.initialize(f, None)
         start = time()
-        mab_solver.iterate(bandit_iterations, f)
+        mab_solver.iterate(100000, f)
         start = time() - start
         print("Running time", start, file=f)
+        print("Resulting index", mab_solver.action.best_val * (1 if index.is_minimized else -1), file=f)
     print('Finished', fname, file=sys.stderr)
 
 

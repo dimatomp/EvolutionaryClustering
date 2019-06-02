@@ -8,4 +8,4 @@ if __name__ == '__main__':
     #                      # evo_cluster_mutation("mean_centroid_distance_separation", "centroid_distance_cohesion"),
     #                      lambda f: CSVLogger(output=f, log_unsuccessful=False))
     #                      #lambda f: Matplotlib2DLogger(CSVLogger(output=f, log_unsuccessful=False)))
-    run_shalamov('/dev/stdout', silhouette_index, load_generated_random_normal(2000, dim=2, n_clusters=30, prefix='scratch'))
+    run_shalamov('/dev/stdout', calinski_harabaz_index, normalize_data(load_from_file('dataset_187_abalone.csv', prefix='datasets/regular')))

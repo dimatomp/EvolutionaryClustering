@@ -1,15 +1,5 @@
 import os
 
-datas = [
-    ('generated_2dim_10cl', 'load_generated_random_normal(2000, dim=2, n_clusters=10, prefix=generated_prefix)'),
-    ('generated_2dim_30cl', 'load_generated_random_normal(2000, dim=2, n_clusters=30, prefix=generated_prefix)'),
-    ('generated_10dim_10cl', 'load_generated_random_normal(2000, dim=10, n_clusters=10, prefix=generated_prefix)'),
-    ('generated_10dim_30cl', 'load_generated_random_normal(2000, dim=10, n_clusters=30, prefix=generated_prefix)'),
-    ('immunotherapy', 'normalize_data(load_immunotherapy(prefix=real_prefix))'),
-    ('user_knowledge', 'normalize_data(load_user_knowledge(prefix=real_prefix))'),
-    ('sales_transactions', 'load_sales_transactions(prefix=real_prefix)')
-]
-
 indices = [
     ('silhouette', 'silhouette_index'),
     ('calinski_harabaz', 'calinski_harabaz_index'),
@@ -50,8 +40,10 @@ mutations = [
     # ('all_mutations_dynamic', 'axis_initialization', 'all_moves_dynamic_mutation(silent=True)'),
     # ('one_plus_lambda_all_moves', 'tree_initialization', 'list(map(SingleMoveMutation, get_all_moves()))'),
     # Predicted policies
-    ('true_mutations_trivial', 'tree_initialization', 'true_moves_mutation("{0}", "{1}", silent=True)'),
-    ('predicted_mutations_trivial', 'tree_initialization', 'predicted_moves_mutation("{0}", "{1}", prefix=predicted_prefix, silent=True)')
+    # ('true_mutations_trivial', 'tree_initialization', 'true_moves_mutation("{0}", "{1}", silent=True)'),
+    # ('predicted_mutations_trivial', 'tree_initialization', 'predicted_moves_mutation("{0}", "{1}", prefix=predicted_prefix, silent=True)')
+    # Shalamov
+    ('shalamov', None, None)
 ]
 
 
@@ -60,19 +52,33 @@ def get_file_name(index, data, mutation):
 
 
 def init_batch(real_prefix):
+    datas = [
+        ('generated_2dim_10cl', 'load_generated_random_normal(2000, dim=2, n_clusters=10, prefix=generated_prefix)'),
+        ('generated_2dim_30cl', 'load_generated_random_normal(2000, dim=2, n_clusters=30, prefix=generated_prefix)'),
+        ('generated_10dim_10cl', 'load_generated_random_normal(2000, dim=10, n_clusters=10, prefix=generated_prefix)'),
+        ('generated_10dim_30cl', 'load_generated_random_normal(2000, dim=10, n_clusters=30, prefix=generated_prefix)'),
+        ('immunotherapy', 'normalize_data(load_immunotherapy(prefix=real_prefix))'),
+        ('user_knowledge', 'normalize_data(load_user_knowledge(prefix=real_prefix))'),
+        ('sales_transactions', 'load_sales_transactions(prefix=real_prefix)')
+    ]
     for s in sorted(os.listdir(real_prefix + '/regular')):  # + os.listdir(real_prefix + '/regular/invalid')):
         if s != 'invalid':
             datas.append((s[:s.find('.')].replace('-', '_'),
                           'normalize_data(load_from_file("{}", prefix="{}/regular"))'.format(s, real_prefix)))
+    datas = datas[:20]
     tasks = []
     for mutation_name, init, mutation in mutations:
         for index_name, index in indices:
             for data_name, data in datas:
                 fname = get_file_name(index_name, data_name, mutation_name)
                 tasks.append((fname,
-                              "run_one_plus_one_task(output_prefix + '/' + '{}', {}, {}, {}, {})".format(fname, index,
-                                                                                                         data, init,
-                                                                                                         mutation.format(
-                                                                                                             data_name,
-                                                                                                             index_name))))
+                              "run_shalamov(output_prefix + '/' + '{}', {}, {}, '{}', '{}')".format(fname, index, data,
+                                                                                                    index_name,
+                                                                                                    data_name)))
+                # tasks.append((fname,
+                #              "run_one_plus_one_task(output_prefix + '/' + '{}', {}, {}, {}, {})".format(fname, index,
+                #                                                                                         data, init,
+                #                                                                                         mutation.format(
+                #                                                                                             data_name,
+                #                                                                                             index_name))))
     return tasks
