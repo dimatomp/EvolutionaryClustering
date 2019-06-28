@@ -1,4 +1,4 @@
-from mutations import *
+from .mutations import *
 import pandas as pd
 import pickle
 

@@ -1,4 +1,4 @@
-from main import *
+from .main import *
 
 if __name__ == '__main__':
     #run_one_plus_one_task('/dev/stdout', silhouette_index,

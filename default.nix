@@ -59,6 +59,16 @@ let
         doCheck = false;
       };
 
+      wget = buildPythonPackage rec {
+        pname = "wget";
+        version = "3.2";
+        src = fetchPypi {
+          inherit pname version;
+          extension = "zip";
+          sha256 = "0qb0y7ipby42m4m7h0ipazpdyc3bn9xi46lvifcwwl5albn31rim";
+        };
+      };
+
       xgboost = super.xgboost.overrideAttrs (oldAttrs: {
         patches = [
           (substituteAll {
@@ -87,4 +97,4 @@ let
       };
     };
 in
-  ((python3.override { packageOverrides = pythonPackageOverrides; }).withPackages (pkgs: with pkgs; [numpy scipy matplotlib scikitlearn pyqt5 notebook pandas ipython auto-sklearn pulp])).env
+  ((python3.override { packageOverrides = pythonPackageOverrides; }).withPackages (pkgs: with pkgs; [numpy scipy matplotlib scikitlearn pyqt5 notebook pandas ipython auto-sklearn pulp wget])).env

@@ -1,7 +1,7 @@
 from sklearn.neighbors import BallTree
-from cluster_measures import *
+from .cluster_measures import *
 from itertools import chain
-from individual import Individual
+from .individual import Individual
 from scipy.sparse import coo_matrix, find
 from scipy.sparse.csgraph import connected_components
 import sys

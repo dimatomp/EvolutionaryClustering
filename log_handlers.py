@@ -32,12 +32,16 @@ def decode_solution(string):
     return labels
 
 
+def silent_logging(n_step, c_index, c_solution, n_mutations, minor, success, delta_time, detail): pass
+
+
 class CSVLogger:
     def __init__(self, output=None, log_unsuccessful=False):
         self.output = output or sys.stdout
         self.log_unsuccessful = log_unsuccessful
         self.start_time = None
         self.prev_labels = None
+        self.sorting_perm = None
         print('generation,index,n_successful_mutations,n_clusters,delta_time,time,detail,individual',
               file=output or sys.stdout)
 
@@ -45,9 +49,10 @@ class CSVLogger:
         c_time = time()
         self.start_time = self.start_time or c_time
         if not self.log_unsuccessful and not success: return
-        solution_diff = c_solution['labels'] - self.prev_labels if self.prev_labels is not None else c_solution[
-            'labels']
-        self.prev_labels = c_solution['labels']
+        solution_diff = c_solution['labels'][self.sorting_perm] - self.prev_labels if self.prev_labels is not None else \
+        c_solution['labels']
+        self.sorting_perm = np.argsort(c_solution['labels'])
+        self.prev_labels = c_solution['labels'][self.sorting_perm]
         print(n_step, c_index, n_mutations, len(np.unique(c_solution["labels"])), delta_time,
               c_time - self.start_time, str(detail).replace(',', ';'), encode_solution(solution_diff), sep=',',
               file=self.output)

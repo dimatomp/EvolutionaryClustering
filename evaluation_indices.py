@@ -1,5 +1,5 @@
 from sklearn.metrics import silhouette_score, calinski_harabaz_score
-from cluster_measures import *
+from .cluster_measures import *
 
 
 def evaluation_index(minimize):
@@ -99,6 +99,21 @@ def generalized_dunn_index(separation, cohesion):
 
 
 dunn_index = generalized_dunn_index(separation="single_linkage", cohesion="diameter")
+
+indices = [
+    ('silhouette', 'silhouette_index'),
+    ('calinski_harabaz', 'calinski_harabaz_index'),
+    ('davies_bouldin', 'davies_bouldin_index'),
+    ('dvcb', 'dvcb_index'),
+    ('dunn', 'dunn_index'),
+    ('generalized_dunn_41', 'generalized_dunn_index(separation="centroid_distance", cohesion="diameter")'),
+    ('generalized_dunn_43', 'generalized_dunn_index(separation="centroid_distance", cohesion="mean_distance")'),
+    ('generalized_dunn_51', 'generalized_dunn_index(separation="mean_per_cluster", cohesion="diameter")'),
+    ('generalized_dunn_53', 'generalized_dunn_index(separation="mean_per_cluster", cohesion="mean_distance")'),
+    ('generalized_dunn_13', 'generalized_dunn_index(separation="single_linkage", cohesion="mean_distance")'),
+    # ('generalized_dunn_31', 'generalized_dunn_index(separation="mean_per_point", cohension="diameter")'),
+    # ('generalized_dunn_33', 'generalized_dunn_index(separation="mean_per_point", cohension="mean_distance")'),
+]
 
 # TODO 3 more (density-based?) measures, not from [2009]
 '''

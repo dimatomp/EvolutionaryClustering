@@ -1,5 +1,5 @@
-from cluster_measures import *
-from individual import Individual
+from .cluster_measures import *
+from .individual import Individual
 from scipy.sparse import find, coo_matrix
 from scipy.sparse.csgraph import minimum_spanning_tree, connected_components
 

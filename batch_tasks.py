@@ -1,19 +1,5 @@
 import os
 
-indices = [
-    ('silhouette', 'silhouette_index'),
-    ('calinski_harabaz', 'calinski_harabaz_index'),
-    ('davies_bouldin', 'davies_bouldin_index'),
-    ('dvcb', 'dvcb_index'),
-    ('dunn', 'dunn_index'),
-    ('generalized_dunn_41', 'generalized_dunn_index(separation="centroid_distance", cohesion="diameter")'),
-    ('generalized_dunn_43', 'generalized_dunn_index(separation="centroid_distance", cohesion="mean_distance")'),
-    ('generalized_dunn_51', 'generalized_dunn_index(separation="mean_per_cluster", cohesion="diameter")'),
-    ('generalized_dunn_53', 'generalized_dunn_index(separation="mean_per_cluster", cohesion="mean_distance")'),
-    ('generalized_dunn_13', 'generalized_dunn_index(separation="single_linkage", cohesion="mean_distance")'),
-    # ('generalized_dunn_31', 'generalized_dunn_index(separation="mean_per_point", cohension="diameter")'),
-    # ('generalized_dunn_33', 'generalized_dunn_index(separation="mean_per_point", cohension="mean_distance")'),
-]
 mutations = [
     ## These mutations no longer exist
     # ('centroid_hill_climbing', 'centroid_initialization', 'centroid_hill_climbing_mutation'),

@@ -1,6 +1,6 @@
 from time import time
 from numpy import isnan
-from mutations import MutationNotApplicable
+from .mutations import MutationNotApplicable
 from random import choice
 import traceback
 import sys

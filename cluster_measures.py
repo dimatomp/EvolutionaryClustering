@@ -4,7 +4,7 @@ from numpy.linalg import norm
 from scipy.spatial.distance import pdist, cdist, squareform
 from scipy.sparse import find, csr_matrix
 from scipy.sparse.csgraph import minimum_spanning_tree, dijkstra
-from individual import Individual
+from .individual import Individual
 
 
 def get_clusters_and_centroids(labels=None, data=None, cluster_labels=None, clusters=None, centroids=None, **kwargs):

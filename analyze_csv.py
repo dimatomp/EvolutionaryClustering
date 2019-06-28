@@ -2,7 +2,7 @@ import sys
 import pandas as pd
 import os
 import traceback
-from batch_tasks import *
+from .batch_tasks import *
 from io import StringIO
 from itertools import chain
 
