@@ -4,6 +4,8 @@ from itertools import chain
 from .individual import Individual
 from scipy.sparse import coo_matrix, find
 from scipy.sparse.csgraph import connected_components
+from numpy.random import choice
+from math import ceil, sqrt
 import sys
 import traceback
 
@@ -567,3 +569,69 @@ def non_prototype_moves_dynamic_mutation(separation=None, cohesion=None, silent=
 
 def all_moves_dynamic_mutation(separation=None, cohesion=None, silent=False):
     return DynamicStrategyMutation(get_all_moves(separation, cohesion), silent=silent)
+
+
+#### new mutation
+
+def euclidian_dist(x1, x2):
+    sum = 0
+    for i in range(len(x1)):
+        sum += (x1[i] - x2[i]) ** 2
+    return sqrt(sum)
+
+def get_clusters_and_centroids(centroids, data):
+    row, column = data.shape
+    centroids_numbers, centroid_distances = [], []
+    for i in range(row):
+        centroid_distances.append(sys.float_info.max)
+        centroids_numbers.append(0)
+
+    for i in range(row):
+        for j in range(len(centroids)):
+            distance = euclidian_dist(data[i], centroids[j])
+            if (distance <= centroid_distances[j]):
+                centroid_distances[i] = distance
+                centroids_numbers[i] = j
+
+    return centroids_numbers, centroid_distances
+
+
+# main function
+def fast_point_move(indiv: Individual):
+    mutation_rate = indiv["mutation_rate"]
+    #это нужно, чтобы хранить значение меры на прошлой итерации алгоритма,
+    # чтобы потом смотреть на то, как она изменилась и менять mutation_rate
+    CVI_value = indiv["CVI_val"]
+    labels, data = copy_labels(indiv)
+
+
+    # вектор принадлежности каждого элемента центроиду (а также кластеру),
+    # расстояния от каждого элемента до ближайшего кластера
+    centroids_numbers, centroid_distances = get_clusters_and_centroids(labels, data)
+
+    # calculating the probabilities for the points to be moved
+    sum_of_distances = sum(1 / i for i in centroid_distances)
+    probabilities = [(1 / i) / sum_of_distances for i in centroid_distances]
+
+    # choosing each point with probability that is inversely proportional to its distance to the nearest cluster
+    to_mutate = choice(list(range(len(centroids_numbers))), int(ceil(mutation_rate)), False, probabilities)
+
+    new_CVI_value = 0
+    # calculate_CVI_without_move(points_to_move, clusters_to_move_to)
+    # тут надо посчитать меру, не двигая точек между кластерами, я не совсем понимаю, как это можно сделать
+    #new_CVI_value = calculate_CVI_without_move(to_mutate, [centroids_numbers[point] for point in to_mutate])
+
+    if new_CVI_value > CVI_value: #в зависимости от выбранной меры, на самом деле
+        mutation_rate = min(mutation_rate * 2 ** 0.25, len(labels) / 2)
+    elif new_CVI_value <= CVI_value:
+        mutation_rate = max(mutation_rate / 2, 1)
+
+        indiv.set_partition_field('CVI_val', new_CVI_value)
+        clusters_to_move_to = [centroids_numbers[point] for point in to_mutate]
+        for i in range(len(to_mutate)):
+            point = to_mutate[i]
+            labels[point] = clusters_to_move_to[i]
+        indiv.set_partition_field('labels', labels)
+    indiv.set_partition_field('mutation_rate', mutation_rate)
+
+    #new_measure = self.clusterization.recalculate_full_measure(to_mutate, [centroids_numbers[point] for point in to_mutate])
