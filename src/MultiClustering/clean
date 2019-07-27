@@ -1,0 +1,3 @@
+cd ~/WORK/MultiClustering
+rm -r ./smac3-output_*
+rm slurm-*

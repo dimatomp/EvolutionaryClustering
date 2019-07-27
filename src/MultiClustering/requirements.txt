@@ -1,0 +1,14 @@
+matplotlib==2.1.0
+numpy==1.13.3
+pandas==0.21.0
+pyparsing==2.2.0
+scikit-learn==0.19.1
+scipy==1.0.0
+six
+cycler
+python-dateutil
+ConfigSpace==0.3.3
+pynisher==0.4
+pyrfr==0.6.1
+smac==0.6.0
+pulp==1.6.0

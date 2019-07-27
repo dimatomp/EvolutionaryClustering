@@ -1,16 +1,15 @@
 from random import randrange
 
-from .MultiClustering.Constants import bandit_iterations, batch_size
-from .MultiClustering.RLrfAlgoEx import RLrfrsAlgoEx
-from .MultiClustering.mab_solvers.Smx_R import SoftmaxR
-from .algorithms import *
-from .initialization import *
-from .mutations import *
-from .data_generation import *
-from .evaluation_indices import *
-from .batch_tasks import *
-from .log_handlers import *
-from .selective_mutations import *
+from src.MultiClustering.Constants import batch_size
+from src.MultiClustering.RLrfAlgoEx import RLrfrsAlgoEx
+from src.MultiClustering.mab_solvers.Smx_R import SoftmaxR
+from src.algorithms import *
+from src.batch_tasks import *
+from src.log_handlers import *
+from src.selective_mutations import *
+from src.evaluation_indices import *
+from src.initialization import *
+from src.data_generation import *
 from sklearn.metrics import adjusted_rand_score
 from sklearn.cluster import KMeans, AffinityPropagation, AgglomerativeClustering, MeanShift
 from time import time
